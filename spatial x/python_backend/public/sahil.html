@@ -331,11 +331,14 @@
       updateAlerts(); render();
     }
 
-    // Prefer backend data; retain the randomized dashboard when the API is unavailable.
+    // Prefer backend data; retain the original randomized dashboard if the API is unavailable.
     function loadChartHistory(readings) {
       if (!Array.isArray(readings) || readings.length === 0) return;
       const samples = readings.slice(-CONFIG.chartPoints);
-      const labels = samples.map((reading, index) => reading.timestamp ? new Date(reading.timestamp).toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" }) : String(index + 1));
+      const labels = samples.map((reading, index) => {
+        if (!reading.timestamp) return String(index + 1);
+        return new Date(reading.timestamp).toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" });
+      });
       for (const chart of Object.values(chartInstances)) {
         if (!chart) continue;
         chart.data.labels = labels;
