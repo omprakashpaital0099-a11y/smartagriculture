@@ -1,2 +1,6 @@
 node_modules/
 *.log
+venv/
+.venv/
+__pycache__/
+.streamlit/secrets.toml
