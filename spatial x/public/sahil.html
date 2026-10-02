@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7f1">
+  <title>Fieldwise | Smart Agriculture Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    /* 01. Theme tokens and foundations */
+    :root {
+      color-scheme: light;
+      --page: #f4f7f1; --surface: #ffffff; --surface-2: #edf3e9; --ink: #1e3025;
+      --muted: #68776d; --line: #dce5d9; --green: #276b45; --green-2: #4d9562;
+      --green-wash: #e4f1e5; --lime: #c9e46b; --orange: #d88339; --red: #bd3434;
+      --red-wash: #fff0ed; --shadow: 0 14px 38px rgba(34, 63, 42, .07); --radius: 12px;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark; --page: #111b16; --surface: #1a2820; --surface-2: #24352a;
+      --ink: #edf5ec; --muted: #a8b9aa; --line: #34493a; --green: #82c494;
+      --green-2: #a0d6a8; --green-wash: #263d2d; --lime: #d0e888; --orange: #f0a45f;
+      --red: #ff7770; --red-wash: #482b2a; --shadow: 0 14px 38px rgba(0, 0, 0, .2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 84px; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-family: "DM Sans", sans-serif; line-height: 1.55; transition: background .25s, color .25s; }
+    button, select { font: inherit; }
+    button, a, select { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid var(--lime); outline-offset: 3px; }
+    a { color: inherit; }
+    .wrap { width: min(1180px, calc(100% - 44px)); margin-inline: auto; }
+    .section { padding: 82px 0; }
+    .eyebrow { color: var(--green); font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { font-family: Manrope, "DM Sans", sans-serif; }
+    h2 { margin-bottom: 12px; font-size: clamp(1.8rem, 3.5vw, 2.65rem); line-height: 1.12; letter-spacing: 0; }
+    .section-intro { max-width: 660px; margin-bottom: 32px; color: var(--muted); }
+    .icon { width: 21px; height: 21px; display: inline-block; vertical-align: middle; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* 02. Navigation and controls */
+    .topbar { position: sticky; top: 0; z-index: 20; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--page) 93%, transparent); backdrop-filter: blur(14px); }
+    .nav { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: Manrope, sans-serif; font-weight: 800; font-size: 1.15rem; }
+    .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 10px 10px 10px 3px; color: #183a25; background: var(--lime); }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: .87rem; font-weight: 600; }
+    .nav-links a:hover { color: var(--green); }
+    .nav-tools { display: flex; align-items: center; gap: 9px; }
+    .icon-button, .select-control { min-width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--surface); }
+    .icon-button { display: grid; place-items: center; cursor: pointer; }
+    .select-control { padding: 0 9px; font-size: .82rem; }
+    .mobile-menu { display: none; }
+
+    /* 03. Hero */
+    .hero { position: relative; overflow: hidden; padding: 83px 0 78px; background: var(--surface-2); }
+    .hero::before { position: absolute; inset: 0 0 0 53%; content: ""; opacity: .5; background-image: linear-gradient(135deg, transparent 48%, color-mix(in srgb, var(--green-2) 16%, transparent) 49%, transparent 50%), linear-gradient(45deg, transparent 48%, color-mix(in srgb, var(--green-2) 12%, transparent) 49%, transparent 50%); background-size: 38px 38px; mask-image: linear-gradient(90deg, transparent, #000); }
+    .hero-grid { position: relative; display: grid; grid-template-columns: 1.15fr .85fr; align-items: center; gap: 48px; }
+    .hero .eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--green-2) 18%, transparent); }
+    .hero h1 { max-width: 700px; margin-bottom: 18px; font-size: clamp(2.4rem, 5.5vw, 4.7rem); letter-spacing: 0; line-height: 1.04; }
+    .hero h1 span { color: var(--green); }
+    .hero-copy { max-width: 590px; margin-bottom: 26px; color: var(--muted); font-size: 1.08rem; }
+    .button { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; padding: 0 18px; border: 1px solid transparent; border-radius: 8px; text-decoration: none; font-weight: 700; cursor: pointer; transition: transform .18s, background .18s; }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: white; background: #276b45; }
+    [data-theme="dark"] .button-primary { color: #112219; background: #a8d7ad; }
+    .button-secondary { color: var(--ink); border-color: var(--line); background: var(--surface); }
+    .hero-visual { position: relative; min-height: 310px; display: grid; place-items: center; }
+    .field-art { position: relative; width: min(390px, 100%); aspect-ratio: 1.25; overflow: hidden; border: 1px solid color-mix(in srgb, var(--green) 18%, transparent); border-radius: 48% 48% 14px 14px; background: linear-gradient(180deg, #dceccf 0%, #b9d79c 49%, #71975c 50%, #365a3d 100%); box-shadow: var(--shadow); }
+    [data-theme="dark"] .field-art { background: linear-gradient(180deg, #344933 0%, #526f49 49%, #6b8f54 50%, #243c2b 100%); }
+    .sun { position: absolute; top: 13%; right: 18%; width: 53px; height: 53px; border-radius: 50%; background: #f5d77b; box-shadow: 0 0 42px rgba(245, 215, 123, .65); }
+    .field-row { position: absolute; left: -8%; width: 120%; height: 36%; border-top: 2px solid rgba(246, 245, 205, .55); border-radius: 50%; transform: rotate(-10deg); }
+    .field-row:nth-of-type(2) { top: 56%; }.field-row:nth-of-type(3) { top: 70%; }.field-row:nth-of-type(4) { top: 84%; }
+    .crop { position: absolute; bottom: 27%; left: 23%; width: 34px; height: 85px; border-left: 3px solid #284b2f; }
+    .crop::before, .crop::after { position: absolute; width: 26px; height: 12px; content: ""; border-radius: 100% 0 100% 0; background: #487c42; }
+    .crop::before { top: 22px; left: -25px; transform: rotate(15deg); }.crop::after { top: 39px; left: 1px; transform: rotate(-18deg) scaleX(-1); }
+    .crop.two { left: 58%; bottom: 34%; transform: scale(.78); }.crop.three { left: 78%; bottom: 28%; transform: scale(.9); }
+    .visual-tag { position: absolute; left: 0; bottom: 18px; padding: 11px 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); font-size: .8rem; font-weight: 700; }
+
+    /* 04. About and architecture */
+    .about-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 54px; align-items: start; }
+    .about-copy { color: var(--muted); }
+    .objective-list { display: grid; gap: 12px; margin-top: 22px; }
+    .objective { display: flex; align-items: flex-start; gap: 12px; }
+    .check { flex: 0 0 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; color: var(--green); background: var(--green-wash); font-weight: 800; }
+    .objective span:last-child { color: var(--ink); }
+    .how-box { padding: 22px; border-left: 3px solid var(--green-2); border-radius: 0 var(--radius) var(--radius) 0; background: var(--surface-2); }
+    .how-box h3 { margin: 0 0 8px; font-size: 1rem; }.how-box p { margin: 0; color: var(--muted); }
+    .architecture { padding-top: 14px; }
+    .architecture-flow { display: grid; grid-template-columns: 1fr 46px 1fr 46px 1fr; align-items: center; gap: 13px; margin-top: 28px; }
+    .arch-node { min-height: 116px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 15px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); text-align: center; }
+    .arch-node .icon { width: 30px; height: 30px; color: var(--green); }.arch-node strong { font-size: .95rem; }.arch-node small { color: var(--muted); }
+    .flow-arrow { color: var(--green-2); text-align: center; font-size: 1.55rem; }
+
+    /* 05. Live dashboard */
+    .dashboard-section { background: var(--surface-2); }
+    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; }
+    .section-heading .section-intro { margin: 0; }
+    .live-status { display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); white-space: nowrap; font-size: .8rem; font-weight: 700; }
+    .sensor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .sensor-card { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); animation: rise .5s both; }
+    .sensor-card:nth-child(2) { animation-delay: .06s; }.sensor-card:nth-child(3) { animation-delay: .12s; }.sensor-card:nth-child(4) { animation-delay: .18s; }
+    .card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .sensor-title { display: flex; align-items: center; gap: 10px; font-size: .95rem; font-weight: 700; }
+    .sensor-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: var(--green); background: var(--green-wash); }
+    .sensor-icon .icon { width: 20px; height: 20px; }
+    .value { margin: 18px 0 4px; font-family: Manrope, sans-serif; font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 800; line-height: 1; }
+    .value small { color: var(--muted); font-family: "DM Sans", sans-serif; font-size: .95rem; font-weight: 600; }
+    .sub-value { color: var(--muted); font-size: .83rem; }
+    .chart-wrap { height: 110px; margin-top: 16px; }
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+    .chart-label { color: var(--muted); font-size: .72rem; }
+    .tank-row { display: grid; grid-template-columns: 1fr 76px; gap: 16px; align-items: center; }
+    .tank { position: relative; width: 58px; height: 112px; margin-inline: auto; overflow: hidden; border: 3px solid var(--green); border-top-width: 5px; border-radius: 8px 8px 12px 12px; background: var(--surface-2); }
+    .tank-fill { position: absolute; right: 0; bottom: 0; left: 0; height: 60%; background: linear-gradient(180deg, #7fc69a, #367d59); transition: height .6s; }
+    .tank-fill::after { position: absolute; top: -5px; left: -10%; width: 120%; height: 10px; content: ""; border-radius: 50%; background: rgba(255,255,255,.42); }
+    .status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 99px; color: var(--green); background: var(--green-wash); font-size: .75rem; font-weight: 800; }
+    .status-pill.danger { color: var(--red); background: var(--red-wash); }
+    .fire-card.is-fire { border-color: var(--red); animation: fireFlash 1s infinite; }
+    .fire-card.is-fire .sensor-icon { color: var(--red); background: var(--red-wash); }.fire-card.is-fire .value { color: var(--red); }
+    .chart-unavailable { display: grid; height: 100%; place-items: center; color: var(--muted); font-size: .8rem; }
+
+    /* 06. Protection, alerts and relay */
+    .protection-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; }
+    .alert-panel, .relay-panel, .history-panel { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    .alert-banner { min-height: 54px; display: flex; align-items: center; gap: 11px; margin: 16px 0; padding: 12px 14px; border-radius: 8px; color: var(--green); background: var(--green-wash); font-weight: 700; }
+    .alert-banner.is-fire { color: var(--red); background: var(--red-wash); animation: fireFlash 1s infinite; }
+    .alert-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+    .alert-item { display: flex; align-items: flex-start; gap: 10px; color: var(--muted); font-size: .9rem; }.alert-item strong { color: var(--ink); }
+    .alert-marker { flex: 0 0 8px; width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--orange); }.alert-marker.ok { background: var(--green-2); }
+    .relay-panel { display: flex; flex-direction: column; justify-content: space-between; }
+    .relay-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; }
+    .relay-word { font-family: Manrope, sans-serif; font-size: 1.45rem; font-weight: 800; }
+    .switch { position: relative; width: 64px; height: 36px; flex: 0 0 64px; }.switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .switch-track { position: absolute; inset: 0; border-radius: 999px; background: #839087; cursor: pointer; transition: background .2s; }
+    .switch-track::after { position: absolute; top: 4px; left: 4px; width: 28px; height: 28px; content: ""; border-radius: 50%; background: white; transition: transform .2s; }
+    .switch input:checked + .switch-track { background: #34794e; }.switch input:checked + .switch-track::after { transform: translateX(28px); }
+    .switch input:focus-visible + .switch-track { outline: 3px solid var(--lime); outline-offset: 3px; }.relay-note { margin: 0; color: var(--muted); font-size: .85rem; }
+    .history-panel { grid-column: 1 / -1; }.history-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 0; margin: 15px 0 0; list-style: none; }
+    .history-item { min-height: 78px; padding: 12px; border-left: 3px solid var(--green-2); background: var(--surface-2); font-size: .82rem; }.history-time { display: block; margin-top: 6px; color: var(--muted); font-size: .73rem; }
+    .fire-button { color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, var(--line)); background: var(--surface); }
+
+    /* 07. Hardware and footer */
+    .components-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 28px; }
+    .component { min-height: 120px; padding: 18px; border-top: 2px solid var(--green-2); background: var(--surface); }
+    .component .icon { width: 25px; height: 25px; margin-bottom: 12px; color: var(--green); }
+    .component strong { display: block; margin-bottom: 4px; font-size: .9rem; }.component small { color: var(--muted); }
+    footer { padding: 42px 0 24px; color: #eaf3e9; background: #203c2b; }
+    .footer-grid { display: grid; grid-template-columns: 1fr; gap: 40px; padding-bottom: 30px; }
+    footer p, footer a { color: #c4d6c6; }.footer-links { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: start; }.footer-links a { text-decoration: none; }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 16px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.2); color: #c4d6c6; font-size: .8rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fireFlash { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--red) 22%, transparent); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+    @media (max-width: 850px) {
+      .nav-links { display: none; position: absolute; top: 69px; right: 0; left: 0; padding: 16px 22px 20px; border-bottom: 1px solid var(--line); background: var(--page); }
+      .nav-links.open { display: grid; grid-template-columns: repeat(2, 1fr); }.mobile-menu { display: grid; }
+      .hero-grid { gap: 20px; }.hero { padding: 64px 0; }.about-grid { grid-template-columns: 1fr; gap: 26px; }.components-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .wrap { width: min(100% - 30px, 1180px); }.section { padding: 62px 0; }.hero-grid { grid-template-columns: 1fr; }.hero { padding: 55px 0 44px; }.hero-visual { min-height: 260px; }.field-art { width: min(340px, 93%); }
+      .nav { min-height: 64px; }.nav-links { top: 63px; }.nav-tools { gap: 6px; }.icon-button { min-width: 40px; height: 40px; }.select-control { max-width: 94px; padding-inline: 5px; }
+      .section-heading { align-items: flex-start; flex-direction: column; }.sensor-grid, .protection-grid { grid-template-columns: 1fr; }.history-panel { grid-column: auto; }.history-list { grid-template-columns: 1fr; }
+      .architecture-flow { grid-template-columns: 1fr; gap: 7px; }.arch-node { min-height: 92px; }.flow-arrow { transform: rotate(90deg); }.components-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.component { padding: 14px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 20px; }.footer-bottom { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 08. Inline icon collection -->
+  <svg class="sr-only" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M20 4c-8 0-13 3-13 9a6 6 0 0 0 6 6c6 0 9-5 7-15Z"/><path d="M4 21c3-6 7-9 12-12"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-4-7-13-7-13S5 11 5 15a7 7 0 0 0 7 7Z"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 14.76V5a3 3 0 0 0-6 0v9.76a5 5 0 1 0 6 0Z"/><path d="M11 11v6"/></symbol>
+    <symbol id="i-water" viewBox="0 0 24 24"><path d="M3 6h18v14H3zM7 6V3h10v3"/><path d="M4 15c2-2 4 2 6 0s4 2 6 0 4 2 5 0"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-4-3-7-4-9 0 3-2 4-2 4-1-5-5-8-5-8 1 5-3 8-3 13a7 7 0 0 0 7 7Z"/><path d="M10 18a2 2 0 0 0 4 0c0-1-1-2-2-3-1 1-2 2-2 3Z"/></symbol>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9zM9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 6-7"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a9 9 0 1 0 11 11Z"/></symbol>
+  </svg>
+  <header class="topbar"><div class="wrap nav">
+    <a class="brand" href="#home" aria-label="Fieldwise home"><span class="brand-mark"><svg class="icon"><use href="#i-leaf"/></svg></span>Fieldwise</a>
+    <nav class="nav-links" id="navLinks" aria-label="Main navigation"><a href="#about" data-i18n="navAbout"></a><a href="#dashboard" data-i18n="navDashboard"></a><a href="#protection" data-i18n="navProtection"></a><a href="#components" data-i18n="navComponents"></a></nav>
+    <div class="nav-tools"><label class="sr-only" for="languageSelect" data-i18n="languageLabel"></label><select class="select-control" id="languageSelect" aria-label="Language"><option value="en">English</option><option value="hi">हिन्दी</option><option value="or">ଓଡ଼ିଆ</option><option value="te">తెలుగు</option></select><button class="icon-button" id="themeButton" type="button" aria-label="Toggle color theme" title="Toggle color theme"><svg class="icon"><use href="#i-moon"/></svg></button><button class="icon-button mobile-menu" id="menuButton" type="button" aria-label="Open navigation" aria-expanded="false"><svg class="icon"><use href="#i-menu"/></svg></button></div>
+  </div></header>
+  <main>
+    <!-- 09. Hero -->
+    <section class="hero" id="home"><div class="wrap hero-grid"><div><div class="eyebrow"><span class="live-dot"></span><span data-i18n="heroEyebrow"></span></div><h1 data-i18n="projectTitle"></h1><p class="hero-copy" data-i18n="heroTagline"></p><a class="button button-primary" href="#dashboard"><span data-i18n="viewDashboard"></span><svg class="icon"><use href="#i-arrow"/></svg></a></div><div class="hero-visual" aria-hidden="true"><div class="field-art"><div class="sun"></div><div class="field-row"></div><div class="field-row"></div><div class="field-row"></div><div class="crop"></div><div class="crop two"></div><div class="crop three"></div></div><div class="visual-tag"><span class="live-dot"></span> <span data-i18n="fieldConnected"></span></div></div></div></section>
+    <!-- 10. About and architecture -->
+    <section class="section" id="about"><div class="wrap"><div class="about-grid"><div><div class="eyebrow" data-i18n="aboutEyebrow"></div><h2 data-i18n="aboutTitle"></h2><p class="about-copy" data-i18n="problemStatement"></p><div class="objective-list"><div class="objective"><span class="check">✓</span><span data-i18n="objectiveOne"></span></div><div class="objective"><span class="check">✓</span><span data-i18n="objectiveTwo"></span></div><div class="objective"><span class="check">✓</span><span data-i18n="objectiveThree"></span></div></div></div><div><div class="how-box"><h3 data-i18n="howTitle"></h3><p data-i18n="howBody"></p></div></div></div>
+      <div class="architecture" id="architecture"><div class="eyebrow" data-i18n="architectureEyebrow"></div><h2 data-i18n="architectureTitle"></h2><p class="section-intro" data-i18n="architectureBody"></p><div class="architecture-flow"><div class="arch-node"><svg class="icon"><use href="#i-drop"/></svg><strong data-i18n="sensorsNode"></strong><small data-i18n="sensorTypes"></small></div><div class="flow-arrow" aria-hidden="true">→</div><div class="arch-node"><svg class="icon"><use href="#i-chip"/></svg><strong data-i18n="controllerNode"></strong><small data-i18n="controllerDetail"></small></div><div class="flow-arrow" aria-hidden="true">→</div><div class="arch-node"><svg class="icon"><use href="#i-chart"/></svg><strong data-i18n="dashboardNode"></strong><small data-i18n="dashboardDetail"></small></div></div></div>
+    </div></section>
+    <!-- 11. Simulated sensor dashboard -->
+    <section class="section dashboard-section" id="dashboard"><div class="wrap"><div class="section-heading"><div><div class="eyebrow" data-i18n="dashboardEyebrow"></div><h2 data-i18n="dashboardTitle"></h2><p class="section-intro" data-i18n="dashboardIntro"></p></div><div class="live-status"><span class="live-dot"></span><span data-i18n="simulatedLive"></span></div></div>
+      <div class="sensor-grid">
+        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-leaf"/></svg></span><span data-i18n="soilTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="soilValue">42</span><small>%</small></div><div class="sub-value" id="soilState"></div><div class="chart-wrap"><canvas id="soilChart" role="img" aria-label="Soil moisture chart"></canvas></div></article>
+        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-thermo"/></svg></span><span data-i18n="climateTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="tempValue">27.4</span><small> °C</small></div><div class="sub-value"><span data-i18n="humidityLabel"></span>: <strong id="humidityValue">64</strong>%</div><div class="chart-wrap"><canvas id="climateChart" role="img" aria-label="Temperature and humidity chart"></canvas></div></article>
+        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-water"/></svg></span><span data-i18n="waterTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="tank-row"><div><div class="value"><span id="waterValue">78</span><small>%</small></div><div class="sub-value" data-i18n="reservoirLevel"></div><div class="chart-wrap"><canvas id="waterChart" role="img" aria-label="Water level chart"></canvas></div></div><div class="tank" role="img" aria-label="Water tank gauge"><div class="tank-fill" id="tankFill"></div></div></div></article>
+        <article class="sensor-card fire-card" id="fireCard"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-flame"/></svg></span><span data-i18n="fireTitle"></span></div><span class="chart-label" data-i18n="liveStatus"></span></div><div class="value" id="fireValue"></div><div class="sub-value" id="fireState"></div><div class="chart-wrap"><canvas id="fireChart" role="img" aria-label="Fire sensor status chart"></canvas></div></article>
+      </div></div></section>
+    <!-- 12. Protection, alerts, and relay -->
+    <section class="section" id="protection"><div class="wrap"><div class="section-heading"><div><div class="eyebrow" data-i18n="protectionEyebrow"></div><h2 data-i18n="protectionTitle"></h2><p class="section-intro" data-i18n="protectionIntro"></p></div><button class="button fire-button" id="fireButton" type="button"><svg class="icon"><use href="#i-flame"/></svg><span data-i18n="simulateFire"></span></button></div>
+      <div class="protection-grid"><section class="alert-panel" aria-labelledby="alertHeading"><h3 id="alertHeading" data-i18n="activeAlerts"></h3><div class="alert-banner" id="alertBanner" role="status" aria-live="assertive"><svg class="icon"><use href="#i-bell"/></svg><span id="alertMessage"></span></div><ul class="alert-list" id="alertList"></ul></section><section class="relay-panel" aria-labelledby="relayHeading"><div><div class="eyebrow" data-i18n="actuatorEyebrow"></div><h3 id="relayHeading" data-i18n="relayTitle"></h3><div class="relay-status"><span class="relay-word" id="relayWord"></span><label class="switch"><input id="relaySwitch" type="checkbox" role="switch" aria-label="Toggle irrigation pump"><span class="switch-track"></span></label></div></div><p class="relay-note" data-i18n="relayNote"></p></section><section class="history-panel" aria-labelledby="historyHeading"><h3 id="historyHeading" data-i18n="historyTitle"></h3><ul class="history-list" id="historyList" aria-live="polite"></ul></section></div>
+    </div></section>
+    <!-- 13. Hardware components -->
+    <section class="section" id="components"><div class="wrap"><div class="eyebrow" data-i18n="componentsEyebrow"></div><h2 data-i18n="componentsTitle"></h2><p class="section-intro" data-i18n="componentsIntro"></p><div class="components-grid">
+      <div class="component"><svg class="icon"><use href="#i-chip"/></svg><strong data-i18n="componentController"></strong><small data-i18n="componentControllerDetail"></small></div><div class="component"><svg class="icon"><use href="#i-leaf"/></svg><strong data-i18n="componentSoil"></strong><small data-i18n="componentSoilDetail"></small></div><div class="component"><svg class="icon"><use href="#i-thermo"/></svg><strong data-i18n="componentClimate"></strong><small data-i18n="componentClimateDetail"></small></div><div class="component"><svg class="icon"><use href="#i-water"/></svg><strong data-i18n="componentWater"></strong><small data-i18n="componentWaterDetail"></small></div><div class="component"><svg class="icon"><use href="#i-flame"/></svg><strong data-i18n="componentFire"></strong><small data-i18n="componentFireDetail"></small></div><div class="component"><svg class="icon"><use href="#i-chip"/></svg><strong data-i18n="componentRelay"></strong><small data-i18n="componentRelayDetail"></small></div><div class="component"><svg class="icon"><use href="#i-water"/></svg><strong data-i18n="componentPump"></strong><small data-i18n="componentPumpDetail"></small></div><div class="component"><svg class="icon"><use href="#i-sun"/></svg><strong data-i18n="componentPower"></strong><small data-i18n="componentPowerDetail"></small></div>
+    </div></div></section>
+  </main>
+  <!-- 14. Team and contact footer -->
+  <footer id="contact"><div class="wrap"><div class="footer-grid"><div><div class="eyebrow" style="color:#c9e46b" data-i18n="teamContact"></div><p data-i18n="teamName"></p><div class="footer-links"><a href="mailto:fieldwise@example.com">fieldwise@example.com</a><a href="#architecture" data-i18n="architectureLink"></a><a href="#dashboard" data-i18n="dashboardLink"></a></div></div></div><div class="footer-bottom"><span data-i18n="footerCopyright"></span><span data-i18n="simulationNote"></span></div></div></footer>
+
+  <script>
+    /* 15. Simulation configuration: thresholds and update cadence */
+    const CONFIG = { refreshIntervalMs: 3000, soilMoistureThreshold: 30, lowWaterThreshold: 20, soilRange: [24, 72], temperatureRange: [20, 35], humidityRange: [42, 86], waterRange: [12, 96], historyLimit: 6, chartPoints: 16 };
+    const API_URL = "/api/sensors";
+    const HISTORY_URL = "/api/history?limit=20";
+
+    /* 16. All interface copy, status text, and chart labels */
+    const translations = {
+      en: {
+        navAbout: "About", navDashboard: "Live dashboard", navProtection: "Protection", navComponents: "Components", languageLabel: "Choose language", themeToggle: "Toggle color theme", openNavigation: "Open navigation", togglePump: "Toggle irrigation pump",
+        heroEyebrow: "Field monitoring, made practical", projectTitle: "An IoT Based Smart Agriculture Monitoring and Protection System", heroTagline: "A clearer view of every growing condition. Monitor the field, catch risks early, and make irrigation decisions with confidence.", viewDashboard: "View Live Dashboard", fieldConnected: "Field conditions at a glance",
+        aboutEyebrow: "Why Fieldwise", aboutTitle: "Better information for healthier fields", problemStatement: "Unpredictable weather, inefficient water use, and delayed detection of hazards can put crops and farm resources at risk. Fieldwise demonstrates how connected sensors can bring essential field conditions into one readable view.", objectiveOne: "Monitor soil moisture, temperature, humidity, reservoir level, and fire status.", objectiveTwo: "Surface low-moisture, low-water, and fire conditions as actionable alerts.", objectiveThree: "Support timely irrigation decisions with a manually controlled pump relay.", howTitle: "How the system works", howBody: "Field sensors provide readings to an ESP32 or Arduino controller. The controller can evaluate thresholds and drive a relay; this frontend displays simulated readings and alert logic locally, without connecting to hardware or a backend.",
+        architectureEyebrow: "From field to screen", architectureTitle: "System architecture", architectureBody: "A simple monitoring path from sensor readings to local decisions and a clear dashboard.", sensorsNode: "Field sensors", sensorTypes: "Soil · climate · water · fire", controllerNode: "ESP32 / Arduino", controllerDetail: "Readings · thresholds · relay", dashboardNode: "Fieldwise dashboard", dashboardDetail: "Charts · alerts · controls",
+        dashboardEyebrow: "Local simulation", dashboardTitle: "Live field dashboard", dashboardIntro: "Sensor values refresh every three seconds. This demo uses realistic simulated data; it is not connected to physical sensors.", simulatedLive: "SIMULATED LIVE", soilTitle: "Soil moisture", climateTitle: "Temperature & humidity", waterTitle: "Water level", fireTitle: "Fire sensor", humidityLabel: "Humidity", lastThreeHours: "LIVE TREND", reservoirLevel: "Tank / reservoir", liveStatus: "LIVE", chartUnavailable: "Charts need an internet connection", chartTime: "Sample", temperature: "Temperature", humidity: "Humidity", moisture: "Moisture", level: "Water level", safe: "Safe", fireDetected: "Fire Detected", soilNormal: "Moisture is within range", soilLow: "Below threshold · irrigation required",
+        protectionEyebrow: "Respond early", protectionTitle: "Protection & alerts", protectionIntro: "Threshold-based warnings help make changing field conditions easier to act on.", simulateFire: "Simulate Fire", clearFire: "Clear Simulated Fire", activeAlerts: "Current protection status", systemNormal: "All monitored conditions are within range.", fireAlarm: "Fire detected. Alarm active: check the field immediately.", lowWater: "Low water, pump needed", irrigationRequired: "Irrigation required", actuatorEyebrow: "Manual actuator", relayTitle: "Irrigation pump relay", relayOn: "ON", relayOff: "OFF", relayNote: "Demo control only. This switch does not operate a physical pump.", historyTitle: "Alert history", historyFire: "Fire detected · alarm active", historyFireCleared: "Fire simulation cleared", historyWater: "Low water, pump needed", historySoil: "Irrigation required", historyRecovered: "Condition back within range", historyManualOn: "Pump relay switched ON manually", historyManualOff: "Pump relay switched OFF manually", historyEmpty: "No alerts recorded yet.",
+        componentsEyebrow: "Build overview", componentsTitle: "System components", componentsIntro: "Example hardware for a prototype. Choose sensor modules and ratings suited to the actual field installation.", componentController: "ESP32 / Arduino", componentControllerDetail: "Microcontroller board", componentSoil: "Soil moisture probe", componentSoilDetail: "Capacitive sensor", componentClimate: "DHT11 / DHT22", componentClimateDetail: "Temperature & humidity", componentWater: "Water level sensor", componentWaterDetail: "Tank / reservoir level", componentFire: "Flame sensor", componentFireDetail: "Fire detection input", componentRelay: "Relay module", componentRelayDetail: "Isolated actuator switching", componentPump: "Water pump", componentPumpDetail: "Irrigation actuator", componentPower: "Power supply", componentPowerDetail: "Regulated DC supply",
+        footerDescription: "A frontend-only smart agriculture monitoring and protection project.", teamContact: "Project team", teamName: "Fieldwise project team", architectureLink: "System architecture", dashboardLink: "Open dashboard", footerCopyright: "© 2026 Fieldwise · Smart agriculture project", simulationNote: "Simulated values · No hardware connection"
+      },
+      hi: {
+        navAbout: "परिचय", navDashboard: "लाइव डैशबोर्ड", navProtection: "सुरक्षा", navComponents: "घटक", languageLabel: "भाषा चुनें", themeToggle: "रंग थीम बदलें", openNavigation: "नेविगेशन खोलें", togglePump: "सिंचाई पंप बदलें",
+        heroEyebrow: "खेत की निगरानी, सरल तरीके से", projectTitle: "IoT आधारित स्मार्ट कृषि निगरानी और सुरक्षा प्रणाली", heroTagline: "फसल की हर स्थिति को स्पष्ट रूप से देखें। खेत की निगरानी करें, जोखिम जल्दी पहचानें और सिंचाई के निर्णय भरोसे से लें।", viewDashboard: "लाइव डैशबोर्ड देखें", fieldConnected: "खेत की स्थिति एक नज़र में",
+        aboutEyebrow: "Fieldwise क्यों", aboutTitle: "स्वस्थ खेतों के लिए बेहतर जानकारी", problemStatement: "अनिश्चित मौसम, पानी का अक्षम उपयोग और खतरों का देर से पता चलना फसलों व संसाधनों को जोखिम में डाल सकता है। Fieldwise दिखाता है कि जुड़े सेंसर खेत की ज़रूरी स्थितियों को एक स्पष्ट दृश्य में कैसे ला सकते हैं।", objectiveOne: "मिट्टी की नमी, तापमान, आर्द्रता, जल स्तर और आग की स्थिति पर नज़र रखें।", objectiveTwo: "कम नमी, कम पानी और आग की स्थिति के लिए उपयोगी चेतावनी दें।", objectiveThree: "मैन्युअल रूप से नियंत्रित पंप रिले से समय पर सिंचाई में सहायता करें।", howTitle: "प्रणाली कैसे काम करती है", howBody: "खेत के सेंसर ESP32 या Arduino कंट्रोलर को रीडिंग देते हैं। कंट्रोलर सीमा जाँचकर रिले चला सकता है; यह फ्रंटएंड बिना हार्डवेयर या बैकएंड से जुड़े स्थानीय रूप से नकली रीडिंग और अलर्ट दिखाता है।",
+        architectureEyebrow: "खेत से स्क्रीन तक", architectureTitle: "सिस्टम संरचना", architectureBody: "सेंसर रीडिंग से स्थानीय निर्णय और स्पष्ट डैशबोर्ड तक निगरानी का सरल मार्ग।", sensorsNode: "खेत के सेंसर", sensorTypes: "मिट्टी · मौसम · पानी · आग", controllerNode: "ESP32 / Arduino", controllerDetail: "रीडिंग · सीमाएँ · रिले", dashboardNode: "Fieldwise डैशबोर्ड", dashboardDetail: "चार्ट · अलर्ट · नियंत्रण",
+        dashboardEyebrow: "स्थानीय सिमुलेशन", dashboardTitle: "लाइव खेत डैशबोर्ड", dashboardIntro: "सेंसर मान हर तीन सेकंड में अपडेट होते हैं। यह डेमो वास्तविक जैसे नकली डेटा का उपयोग करता है और भौतिक सेंसर से जुड़ा नहीं है।", simulatedLive: "सिमुलेटेड लाइव", soilTitle: "मिट्टी की नमी", climateTitle: "तापमान और आर्द्रता", waterTitle: "जल स्तर", fireTitle: "आग सेंसर", humidityLabel: "आर्द्रता", lastThreeHours: "लाइव रुझान", reservoirLevel: "टैंक / जलाशय", liveStatus: "लाइव", chartUnavailable: "चार्ट के लिए इंटरनेट कनेक्शन चाहिए", chartTime: "नमूना", temperature: "तापमान", humidity: "आर्द्रता", moisture: "नमी", level: "जल स्तर", safe: "सुरक्षित", fireDetected: "आग का पता चला", soilNormal: "नमी सामान्य सीमा में है", soilLow: "सीमा से कम · सिंचाई आवश्यक",
+        protectionEyebrow: "जल्दी कार्रवाई करें", protectionTitle: "सुरक्षा और अलर्ट", protectionIntro: "सीमा-आधारित चेतावनियाँ खेत की बदलती स्थितियों पर कार्रवाई आसान बनाती हैं।", simulateFire: "आग का सिमुलेशन", clearFire: "आग सिमुलेशन हटाएँ", activeAlerts: "वर्तमान सुरक्षा स्थिति", systemNormal: "सभी निगरानी स्थितियाँ सामान्य सीमा में हैं।", fireAlarm: "आग का पता चला। अलार्म सक्रिय: तुरंत खेत की जाँच करें।", lowWater: "पानी कम है, पंप चाहिए", irrigationRequired: "सिंचाई आवश्यक", actuatorEyebrow: "मैन्युअल नियंत्रण", relayTitle: "सिंचाई पंप रिले", relayOn: "चालू", relayOff: "बंद", relayNote: "केवल डेमो नियंत्रण। यह स्विच वास्तविक पंप नहीं चलाता।", historyTitle: "अलर्ट इतिहास", historyFire: "आग का पता चला · अलार्म सक्रिय", historyFireCleared: "आग सिमुलेशन हटाया गया", historyWater: "पानी कम है, पंप चाहिए", historySoil: "सिंचाई आवश्यक", historyRecovered: "स्थिति फिर सामान्य सीमा में", historyManualOn: "पंप रिले मैन्युअल रूप से चालू", historyManualOff: "पंप रिले मैन्युअल रूप से बंद", historyEmpty: "अभी कोई अलर्ट दर्ज नहीं है।",
+        componentsEyebrow: "निर्माण का परिचय", componentsTitle: "प्रणाली के घटक", componentsIntro: "प्रोटोटाइप के लिए उदाहरण हार्डवेयर। वास्तविक खेत के लिए उपयुक्त सेंसर मॉड्यूल और रेटिंग चुनें।", componentController: "ESP32 / Arduino", componentControllerDetail: "माइक्रोकंट्रोलर बोर्ड", componentSoil: "मिट्टी नमी प्रोब", componentSoilDetail: "कैपेसिटिव सेंसर", componentClimate: "DHT11 / DHT22", componentClimateDetail: "तापमान और आर्द्रता", componentWater: "जल स्तर सेंसर", componentWaterDetail: "टैंक / जलाशय स्तर", componentFire: "फ्लेम सेंसर", componentFireDetail: "आग पहचान इनपुट", componentRelay: "रिले मॉड्यूल", componentRelayDetail: "एक्ट्यूएटर स्विचिंग", componentPump: "पानी का पंप", componentPumpDetail: "सिंचाई एक्ट्यूएटर", componentPower: "पावर सप्लाई", componentPowerDetail: "रेगुलेटेड DC सप्लाई",
+        footerDescription: "स्मार्ट कृषि निगरानी और सुरक्षा का केवल फ्रंटएंड प्रोजेक्ट।", teamContact: "प्रोजेक्ट टीम", teamName: "Fieldwise प्रोजेक्ट टीम", architectureLink: "सिस्टम संरचना", dashboardLink: "डैशबोर्ड खोलें", footerCopyright: "© 2026 Fieldwise · स्मार्ट कृषि प्रोजेक्ट", simulationNote: "नकली मान · हार्डवेयर कनेक्शन नहीं"
+      },
+      or: {
+        navAbout: "ପରିଚୟ", navDashboard: "ଲାଇଭ୍ ଡ୍ୟାସବୋର୍ଡ", navProtection: "ସୁରକ୍ଷା", navComponents: "ଉପାଦାନ", languageLabel: "ଭାଷା ବାଛନ୍ତୁ", themeToggle: "ରଙ୍ଗ ଥିମ୍ ବଦଳାନ୍ତୁ", openNavigation: "ନାଭିଗେସନ୍ ଖୋଲନ୍ତୁ", togglePump: "ଜଳସେଚନ ପମ୍ପ ବଦଳାନ୍ତୁ",
+        heroEyebrow: "କ୍ଷେତ ନିରୀକ୍ଷଣ, ସରଳ ଉପାୟରେ", projectTitle: "IoT ଆଧାରିତ ସ୍ମାର୍ଟ କୃଷି ନିରୀକ୍ଷଣ ଓ ସୁରକ୍ଷା ପ୍ରଣାଳୀ", heroTagline: "ଫସଲର ପ୍ରତ୍ୟେକ ଅବସ୍ଥାକୁ ସ୍ପଷ୍ଟ ଭାବେ ଦେଖନ୍ତୁ। କ୍ଷେତ ନିରୀକ୍ଷଣ କରନ୍ତୁ, ବିପଦ ଶୀଘ୍ର ଚିହ୍ନନ୍ତୁ ଏବଂ ନିଶ୍ଚିତତାର ସହ ଜଳସେଚନ ନିଷ୍ପତ୍ତି ନିଅନ୍ତୁ।", viewDashboard: "ଲାଇଭ୍ ଡ୍ୟାସବୋର୍ଡ ଦେଖନ୍ତୁ", fieldConnected: "କ୍ଷେତର ଅବସ୍ଥା ଏକ ନଜରରେ",
+        aboutEyebrow: "Fieldwise କାହିଁକି", aboutTitle: "ସୁସ୍ଥ କ୍ଷେତ ପାଇଁ ଉନ୍ନତ ସୂଚନା", problemStatement: "ଅନିଶ୍ଚିତ ପାଣିପାଗ, ଜଳର ଅପବ୍ୟବହାର ଏବଂ ବିପଦ ଚିହ୍ନଟରେ ବିଳମ୍ବ ଫସଲ ଓ କୃଷି ସମ୍ପଦକୁ ବିପଦରେ ପକାଇପାରେ। Fieldwise ଦେଖାଏ ଯେ ସଂଯୁକ୍ତ ସେନ୍ସର କିପରି ଗୁରୁତ୍ୱପୂର୍ଣ୍ଣ କ୍ଷେତ ଅବସ୍ଥାକୁ ଗୋଟିଏ ସ୍ପଷ୍ଟ ଦୃଶ୍ୟରେ ଆଣିପାରେ।", objectiveOne: "ମାଟିର ଆର୍ଦ୍ରତା, ତାପମାତ୍ରା, ଆର୍ଦ୍ରତା, ଜଳ ସ୍ତର ଓ ଅଗ୍ନି ଅବସ୍ଥା ନିରୀକ୍ଷଣ କରନ୍ତୁ।", objectiveTwo: "କମ୍ ଆର୍ଦ୍ରତା, କମ୍ ଜଳ ଓ ଅଗ୍ନି ଅବସ୍ଥା ପାଇଁ କାର୍ଯ୍ୟକ୍ଷମ ସତର୍କତା ଦିଅନ୍ତୁ।", objectiveThree: "ହାତରେ ନିୟନ୍ତ୍ରିତ ପମ୍ପ ରିଲେ ସହିତ ଠିକ୍ ସମୟରେ ଜଳସେଚନରେ ସାହାଯ୍ୟ କରନ୍ତୁ।", howTitle: "ପ୍ରଣାଳୀ କିପରି କାମ କରେ", howBody: "କ୍ଷେତ ସେନ୍ସର ESP32 କିମ୍ବା Arduino ନିୟନ୍ତ୍ରକକୁ ତଥ୍ୟ ଦିଏ। ନିୟନ୍ତ୍ରକ ସୀମା ଯାଞ୍ଚ କରି ରିଲେ ଚଳାଇପାରେ; ଏହି ଫ୍ରଣ୍ଟଏଣ୍ଡ ହାର୍ଡୱେର କିମ୍ବା ବ୍ୟାକଏଣ୍ଡ ସହ ସଂଯୋଗ ନକରି ସ୍ଥାନୀୟ ଭାବେ କୃତ୍ରିମ ତଥ୍ୟ ଓ ସତର୍କତା ଦେଖାଏ।",
+        architectureEyebrow: "କ୍ଷେତରୁ ପରଦାକୁ", architectureTitle: "ସିଷ୍ଟମ୍ ଗଠନ", architectureBody: "ସେନ୍ସର ତଥ୍ୟରୁ ସ୍ଥାନୀୟ ନିଷ୍ପତ୍ତି ଏବଂ ସ୍ପଷ୍ଟ ଡ୍ୟାସବୋର୍ଡ ପର୍ଯ୍ୟନ୍ତ ଏକ ସରଳ ପଥ।", sensorsNode: "କ୍ଷେତ ସେନ୍ସର", sensorTypes: "ମାଟି · ପାଣିପାଗ · ଜଳ · ଅଗ୍ନି", controllerNode: "ESP32 / Arduino", controllerDetail: "ତଥ୍ୟ · ସୀମା · ରିଲେ", dashboardNode: "Fieldwise ଡ୍ୟାସବୋର୍ଡ", dashboardDetail: "ଚାର୍ଟ · ସତର୍କତା · ନିୟନ୍ତ୍ରଣ",
+        dashboardEyebrow: "ସ୍ଥାନୀୟ ସିମୁଲେସନ୍", dashboardTitle: "ଲାଇଭ୍ କ୍ଷେତ ଡ୍ୟାସବୋର୍ଡ", dashboardIntro: "ସେନ୍ସର ମୂଲ୍ୟ ପ୍ରତି ତିନି ସେକେଣ୍ଡରେ ଅପଡେଟ୍ ହୁଏ। ଏହି ଡେମୋ ବାସ୍ତବସମ୍ମତ କୃତ୍ରିମ ତଥ୍ୟ ବ୍ୟବହାର କରେ; ଏହା ଭୌତିକ ସେନ୍ସର ସହ ସଂଯୁକ୍ତ ନୁହେଁ।", simulatedLive: "ସିମୁଲେଟେଡ୍ ଲାଇଭ୍", soilTitle: "ମାଟିର ଆର୍ଦ୍ରତା", climateTitle: "ତାପମାତ୍ରା ଓ ଆର୍ଦ୍ରତା", waterTitle: "ଜଳ ସ୍ତର", fireTitle: "ଅଗ୍ନି ସେନ୍ସର", humidityLabel: "ଆର୍ଦ୍ରତା", lastThreeHours: "ଲାଇଭ୍ ଧାରା", reservoirLevel: "ଟାଙ୍କି / ଜଳାଶୟ", liveStatus: "ଲାଇଭ୍", chartUnavailable: "ଚାର୍ଟ ପାଇଁ ଇଣ୍ଟରନେଟ୍ ସଂଯୋଗ ଆବଶ୍ୟକ", chartTime: "ନମୁନା", temperature: "ତାପମାତ୍ରା", humidity: "ଆର୍ଦ୍ରତା", moisture: "ଆର୍ଦ୍ରତା", level: "ଜଳ ସ୍ତର", safe: "ସୁରକ୍ଷିତ", fireDetected: "ଅଗ୍ନି ଚିହ୍ନଟ", soilNormal: "ଆର୍ଦ୍ରତା ସାଧାରଣ ସୀମାରେ ଅଛି", soilLow: "ସୀମାଠାରୁ କମ୍ · ଜଳସେଚନ ଆବଶ୍ୟକ",
+        protectionEyebrow: "ଶୀଘ୍ର ପଦକ୍ଷେପ ନିଅନ୍ତୁ", protectionTitle: "ସୁରକ୍ଷା ଓ ସତର୍କତା", protectionIntro: "ସୀମା-ଆଧାରିତ ସତର୍କତା କ୍ଷେତର ପରିବର୍ତ୍ତିତ ଅବସ୍ଥାରେ ପଦକ୍ଷେପ ନେବାକୁ ସହଜ କରେ।", simulateFire: "ଅଗ୍ନି ସିମୁଲେଟ୍ କରନ୍ତୁ", clearFire: "ଅଗ୍ନି ସିମୁଲେସନ୍ ବନ୍ଦ କରନ୍ତୁ", activeAlerts: "ବର୍ତ୍ତମାନର ସୁରକ୍ଷା ଅବସ୍ଥା", systemNormal: "ସମସ୍ତ ନିରୀକ୍ଷିତ ଅବସ୍ଥା ସାଧାରଣ ସୀମାରେ ଅଛି।", fireAlarm: "ଅଗ୍ନି ଚିହ୍ନଟ ହୋଇଛି। ଆଲାର୍ମ ସକ୍ରିୟ: ତୁରନ୍ତ କ୍ଷେତ ଯାଞ୍ଚ କରନ୍ତୁ।", lowWater: "ଜଳ କମ୍, ପମ୍ପ ଆବଶ୍ୟକ", irrigationRequired: "ଜଳସେଚନ ଆବଶ୍ୟକ", actuatorEyebrow: "ହାତରେ ନିୟନ୍ତ୍ରଣ", relayTitle: "ଜଳସେଚନ ପମ୍ପ ରିଲେ", relayOn: "ଚାଲୁ", relayOff: "ବନ୍ଦ", relayNote: "କେବଳ ଡେମୋ ନିୟନ୍ତ୍ରଣ। ଏହି ସ୍ୱିଚ୍ ଭୌତିକ ପମ୍ପ ଚଳାଏ ନାହିଁ।", historyTitle: "ସତର୍କତା ଇତିହାସ", historyFire: "ଅଗ୍ନି ଚିହ୍ନଟ · ଆଲାର୍ମ ସକ୍ରିୟ", historyFireCleared: "ଅଗ୍ନି ସିମୁଲେସନ୍ ବନ୍ଦ ହେଲା", historyWater: "ଜଳ କମ୍, ପମ୍ପ ଆବଶ୍ୟକ", historySoil: "ଜଳସେଚନ ଆବଶ୍ୟକ", historyRecovered: "ଅବସ୍ଥା ପୁଣି ସାଧାରଣ ସୀମାରେ", historyManualOn: "ପମ୍ପ ରିଲେ ହାତରେ ଚାଲୁ କରାଗଲା", historyManualOff: "ପମ୍ପ ରିଲେ ହାତରେ ବନ୍ଦ କରାଗଲା", historyEmpty: "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ସତର୍କତା ନାହିଁ।",
+        componentsEyebrow: "ନିର୍ମାଣ ସମୀକ୍ଷା", componentsTitle: "ସିଷ୍ଟମ୍ ଉପାଦାନ", componentsIntro: "ପ୍ରୋଟୋଟାଇପ୍ ପାଇଁ ଉଦାହରଣ ହାର୍ଡୱେର। ପ୍ରକୃତ କ୍ଷେତ ସ୍ଥାପନ ପାଇଁ ଉପଯୁକ୍ତ ସେନ୍ସର ମଡ୍ୟୁଲ୍ ଓ ରେଟିଂ ବାଛନ୍ତୁ।", componentController: "ESP32 / Arduino", componentControllerDetail: "ମାଇକ୍ରୋକଣ୍ଟ୍ରୋଲର ବୋର୍ଡ", componentSoil: "ମାଟି ଆର୍ଦ୍ରତା ପ୍ରୋବ୍", componentSoilDetail: "କ୍ୟାପାସିଟିଭ୍ ସେନ୍ସର", componentClimate: "DHT11 / DHT22", componentClimateDetail: "ତାପମାତ୍ରା ଓ ଆର୍ଦ୍ରତା", componentWater: "ଜଳ ସ୍ତର ସେନ୍ସର", componentWaterDetail: "ଟାଙ୍କି / ଜଳାଶୟ ସ୍ତର", componentFire: "ଫ୍ଲେମ୍ ସେନ୍ସର", componentFireDetail: "ଅଗ୍ନି ଚିହ୍ନଟ ଇନପୁଟ୍", componentRelay: "ରିଲେ ମଡ୍ୟୁଲ୍", componentRelayDetail: "ଆକ୍ଟୁଏଟର ସ୍ୱିଚିଂ", componentPump: "ଜଳ ପମ୍ପ", componentPumpDetail: "ଜଳସେଚନ ଆକ୍ଟୁଏଟର", componentPower: "ପାୱାର ସପ୍ଲାଏ", componentPowerDetail: "ନିୟନ୍ତ୍ରିତ DC ସପ୍ଲାଏ",
+        footerDescription: "ସ୍ମାର୍ଟ କୃଷି ନିରୀକ୍ଷଣ ଓ ସୁରକ୍ଷା ପାଇଁ ଏକ ଫ୍ରଣ୍ଟଏଣ୍ଡ-ମାତ୍ର ପ୍ରକଳ୍ପ।", teamContact: "ପ୍ରକଳ୍ପ ଦଳ", teamName: "Fieldwise ପ୍ରକଳ୍ପ ଦଳ", architectureLink: "ସିଷ୍ଟମ୍ ଗଠନ", dashboardLink: "ଡ୍ୟାସବୋର୍ଡ ଖୋଲନ୍ତୁ", footerCopyright: "© 2026 Fieldwise · ସ୍ମାର୍ଟ କୃଷି ପ୍ରକଳ୍ପ", simulationNote: "କୃତ୍ରିମ ମୂଲ୍ୟ · ହାର୍ଡୱେର ସଂଯୋଗ ନାହିଁ"
+      },
+      te: {
+        navAbout: "పరిచయం", navDashboard: "లైవ్ డ్యాష్‌బోర్డ్", navProtection: "రక్షణ", navComponents: "భాగాలు", languageLabel: "భాషను ఎంచుకోండి", themeToggle: "రంగు థీమ్ మార్చండి", openNavigation: "నావిగేషన్ తెరవండి", togglePump: "నీటిపారుదల పంప్‌ను మార్చండి",
+        heroEyebrow: "వ్యవసాయ క్షేత్ర పర్యవేక్షణ, సులభంగా", projectTitle: "IoT ఆధారిత స్మార్ట్ వ్యవసాయ పర్యవేక్షణ మరియు రక్షణ వ్యవస్థ", heroTagline: "పంట పరిస్థితులను స్పష్టంగా తెలుసుకోండి. క్షేత్రాన్ని పర్యవేక్షించండి, ప్రమాదాలను ముందుగానే గుర్తించండి, నమ్మకంగా నీటిపారుదల నిర్ణయాలు తీసుకోండి.", viewDashboard: "లైవ్ డ్యాష్‌బోర్డ్ చూడండి", fieldConnected: "క్షేత్ర పరిస్థితులు ఒక్క చూపులో",
+        aboutEyebrow: "Fieldwise ఎందుకు", aboutTitle: "ఆరోగ్యకరమైన పంటలకు మెరుగైన సమాచారం", problemStatement: "అనూహ్య వాతావరణం, నీటి అసమర్థ వినియోగం, ప్రమాదాలను ఆలస్యంగా గుర్తించడం పంటలు మరియు వనరులకు ముప్పు కలిగించవచ్చు. కనెక్ట్ చేసిన సెన్సార్లు అవసరమైన క్షేత్ర పరిస్థితులను ఒకే స్పష్టమైన వీక్షణలో చూపగలవని Fieldwise వివరిస్తుంది.", objectiveOne: "నేల తేమ, ఉష్ణోగ్రత, ఆర్ద్రత, నీటి మట్టం మరియు అగ్ని స్థితిని పర్యవేక్షించండి.", objectiveTwo: "తక్కువ తేమ, తక్కువ నీరు మరియు అగ్ని పరిస్థితులకు చర్య తీసుకోదగిన హెచ్చరికలు చూపండి.", objectiveThree: "మాన్యువల్‌గా నియంత్రించే పంప్ రిలేతో సరైన సమయంలో నీటిపారుదలకు సహాయపడండి.", howTitle: "వ్యవస్థ ఎలా పనిచేస్తుంది", howBody: "క్షేత్ర సెన్సార్లు ESP32 లేదా Arduino కంట్రోలర్‌కు రీడింగ్‌లను అందిస్తాయి. కంట్రోలర్ పరిమితులను పరిశీలించి రిలేను నడపగలదు; ఈ ఫ్రంట్‌ఎండ్ హార్డ్‌వేర్ లేదా బ్యాక్‌ఎండ్‌కు కనెక్ట్ కాకుండా స్థానికంగా అనుకరణ రీడింగ్‌లు, హెచ్చరికలను చూపుతుంది.",
+        architectureEyebrow: "క్షేత్రం నుంచి తెర వరకు", architectureTitle: "సిస్టమ్ నిర్మాణం", architectureBody: "సెన్సర్ రీడింగ్‌ల నుంచి స్థానిక నిర్ణయాలు, స్పష్టమైన డ్యాష్‌బోర్డ్ వరకు సరళమైన పర్యవేక్షణ మార్గం.", sensorsNode: "క్షేత్ర సెన్సార్లు", sensorTypes: "నేల · వాతావరణం · నీరు · అగ్ని", controllerNode: "ESP32 / Arduino", controllerDetail: "రీడింగ్‌లు · పరిమితులు · రిలే", dashboardNode: "Fieldwise డ్యాష్‌బోర్డ్", dashboardDetail: "చార్ట్‌లు · హెచ్చరికలు · నియంత్రణలు",
+        dashboardEyebrow: "స్థానిక అనుకరణ", dashboardTitle: "లైవ్ వ్యవసాయ డ్యాష్‌బోర్డ్", dashboardIntro: "సెన్సర్ విలువలు ప్రతి మూడు సెకన్లకు నవీకరించబడతాయి. ఈ డెమో వాస్తవిక అనుకరణ డేటాను ఉపయోగిస్తుంది; భౌతిక సెన్సార్‌లకు కనెక్ట్ కాలేదు.", simulatedLive: "అనుకరణ లైవ్", soilTitle: "నేల తేమ", climateTitle: "ఉష్ణోగ్రత మరియు ఆర్ద్రత", waterTitle: "నీటి మట్టం", fireTitle: "అగ్ని సెన్సార్", humidityLabel: "ఆర్ద్రత", lastThreeHours: "లైవ్ ట్రెండ్", reservoirLevel: "ట్యాంక్ / రిజర్వాయర్", liveStatus: "లైవ్", chartUnavailable: "చార్ట్‌లకు ఇంటర్నెట్ కనెక్షన్ అవసరం", chartTime: "నమూనా", temperature: "ఉష్ణోగ్రత", humidity: "ఆర్ద్రత", moisture: "తేమ", level: "నీటి మట్టం", safe: "సురక్షితం", fireDetected: "అగ్ని గుర్తించబడింది", soilNormal: "తేమ సాధారణ పరిధిలో ఉంది", soilLow: "పరిమితి కంటే తక్కువ · నీటిపారుదల అవసరం",
+        protectionEyebrow: "త్వరగా స్పందించండి", protectionTitle: "రక్షణ మరియు హెచ్చరికలు", protectionIntro: "పరిమితి ఆధారిత హెచ్చరికలు మారుతున్న క్షేత్ర పరిస్థితులకు స్పందించడాన్ని సులభం చేస్తాయి.", simulateFire: "అగ్నిని అనుకరించండి", clearFire: "అగ్ని అనుకరణను ఆపండి", activeAlerts: "ప్రస్తుత రక్షణ స్థితి", systemNormal: "పర్యవేక్షించిన అన్ని పరిస్థితులు సాధారణ పరిధిలో ఉన్నాయి.", fireAlarm: "అగ్ని గుర్తించబడింది. అలారం సక్రియం: వెంటనే క్షేత్రాన్ని పరిశీలించండి.", lowWater: "నీరు తక్కువ, పంప్ అవసరం", irrigationRequired: "నీటిపారుదల అవసరం", actuatorEyebrow: "మాన్యువల్ నియంత్రణ", relayTitle: "నీటిపారుదల పంప్ రిలే", relayOn: "ఆన్", relayOff: "ఆఫ్", relayNote: "డెమో నియంత్రణ మాత్రమే. ఈ స్విచ్ భౌతిక పంప్‌ను నడపదు.", historyTitle: "హెచ్చరికల చరిత్ర", historyFire: "అగ్ని గుర్తించబడింది · అలారం సక్రియం", historyFireCleared: "అగ్ని అనుకరణ నిలిపివేయబడింది", historyWater: "నీరు తక్కువ, పంప్ అవసరం", historySoil: "నీటిపారుదల అవసరం", historyRecovered: "పరిస్థితి తిరిగి సాధారణ పరిధిలోకి వచ్చింది", historyManualOn: "పంప్ రిలే మాన్యువల్‌గా ఆన్ చేయబడింది", historyManualOff: "పంప్ రిలే మాన్యువల్‌గా ఆఫ్ చేయబడింది", historyEmpty: "ఇంకా హెచ్చరికలు నమోదు కాలేదు.",
+        componentsEyebrow: "నిర్మాణ పరిచయం", componentsTitle: "సిస్టమ్ భాగాలు", componentsIntro: "ప్రోటోటైప్ కోసం ఉదాహరణ హార్డ్‌వేర్. నిజమైన క్షేత్ర అమరికకు సరిపోయే సెన్సర్ మాడ్యూల్‌లు, రేటింగ్‌లను ఎంచుకోండి.", componentController: "ESP32 / Arduino", componentControllerDetail: "మైక్రోకంట్రోలర్ బోర్డు", componentSoil: "నేల తేమ ప్రోబ్", componentSoilDetail: "కెపాసిటివ్ సెన్సార్", componentClimate: "DHT11 / DHT22", componentClimateDetail: "ఉష్ణోగ్రత మరియు ఆర్ద్రత", componentWater: "నీటి మట్టం సెన్సార్", componentWaterDetail: "ట్యాంక్ / రిజర్వాయర్ స్థాయి", componentFire: "ఫ్లేమ్ సెన్సార్", componentFireDetail: "అగ్ని గుర్తింపు ఇన్‌పుట్", componentRelay: "రిలే మాడ్యూల్", componentRelayDetail: "యాక్చుయేటర్ స్విచింగ్", componentPump: "నీటి పంప్", componentPumpDetail: "నీటిపారుదల యాక్చుయేటర్", componentPower: "విద్యుత్ సరఫరా", componentPowerDetail: "నియంత్రిత DC సరఫరా",
+        footerDescription: "స్మార్ట్ వ్యవసాయ పర్యవేక్షణ మరియు రక్షణకు ఫ్రంట్‌ఎండ్-మాత్రమే ప్రాజెక్ట్.", teamContact: "ప్రాజెక్ట్ బృందం", teamName: "Fieldwise ప్రాజెక్ట్ బృందం", architectureLink: "సిస్టమ్ నిర్మాణం", dashboardLink: "డ్యాష్‌బోర్డ్ తెరవండి", footerCopyright: "© 2026 Fieldwise · స్మార్ట్ వ్యవసాయ ప్రాజెక్ట్", simulationNote: "అనుకరణ విలువలు · హార్డ్‌వేర్ కనెక్షన్ లేదు"
+      }
+    };
+
+    /* 17. Local state and accessible language/theme handling */
+    const state = { soil: 42, temperature: 27.4, humidity: 64, water: 78, fire: false, simulatedFire: false, relay: false, apiOnline: false, history: [], previousAlerts: new Set(), language: "en" };
+    const chartInstances = {};
+    let themePreference = localStorage.getItem("fieldwise-theme") || "system";
+    const languageSelect = document.getElementById("languageSelect");
+    const t = (key) => translations[state.language][key] || translations.en[key] || key;
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const randomWalk = (value, amount, bounds) => clamp(value + (Math.random() - .5) * amount, bounds[0], bounds[1]);
+
+    function applyLanguage(language) {
+      state.language = translations[language] ? language : "en";
+      document.documentElement.lang = state.language;
+      languageSelect.value = state.language;
+      document.querySelectorAll("[data-i18n]").forEach((element) => { element.textContent = t(element.dataset.i18n); });
+      document.getElementById("themeButton").title = t("themeToggle");
+      document.getElementById("themeButton").setAttribute("aria-label", t("themeToggle"));
+      document.getElementById("menuButton").setAttribute("aria-label", t("openNavigation"));
+      document.getElementById("relaySwitch").setAttribute("aria-label", t("togglePump"));
+      document.getElementById("soilChart").setAttribute("aria-label", t("soilTitle"));
+      document.getElementById("climateChart").setAttribute("aria-label", t("climateTitle"));
+      document.getElementById("waterChart").setAttribute("aria-label", t("waterTitle"));
+      document.getElementById("fireChart").setAttribute("aria-label", t("fireTitle"));
+      updateChartsLanguage();
+      render();
+    }
+    function applyTheme(theme) {
+      const resolved = theme === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : theme;
+      document.documentElement.dataset.theme = resolved;
+      document.querySelector('meta[name="theme-color"]').content = resolved === "dark" ? "#111b16" : "#f4f7f1";
+      const muted = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+      const line = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
+      Object.values(chartInstances).forEach((chart) => { if (!chart) return; chart.options.scales.x.ticks.color = muted; chart.options.scales.y.ticks.color = muted; chart.options.scales.x.grid.color = line; chart.options.scales.y.grid.color = line; chart.update("none"); });
+    }
+    function pushHistory(key) { state.history.unshift({ key, time: new Date() }); state.history = state.history.slice(0, CONFIG.historyLimit); }
+
+    /* 18. Charts and simulated readings */
+    function makeChart(id, datasets, min, max) {
+      const canvas = document.getElementById(id);
+      if (!window.Chart) { canvas.parentElement.innerHTML = `<div class="chart-unavailable">${t("chartUnavailable")}</div>`; return null; }
+      const ink = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+      const line = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
+      const labels = Array.from({ length: CONFIG.chartPoints }, (_, index) => String(index + 1));
+      return new Chart(canvas, { type: "line", data: { labels, datasets: datasets.map((item) => ({ label: t(item.label), translationKey: item.label, data: Array.from({ length: CONFIG.chartPoints }, () => item.initial), borderColor: item.color, backgroundColor: item.color + "22", fill: true, tension: .38, pointRadius: 0, pointHoverRadius: 4, borderWidth: 2 })) }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 350 }, interaction: { intersect: false, mode: "index" }, plugins: { legend: { display: datasets.length > 1, labels: { color: ink, usePointStyle: true, boxWidth: 7, font: { family: "DM Sans", size: 10 } } }, tooltip: { displayColors: true } }, scales: { x: { display: false, grid: { color: line }, ticks: { color: ink } }, y: { min, max, grid: { color: line }, ticks: { color: ink, maxTicksLimit: 4, font: { size: 10 } } } } } });
+    }
+    function initCharts() {
+      chartInstances.soil = makeChart("soilChart", [{ label: "moisture", initial: state.soil, color: "#4e9b68" }], 0, 100);
+      chartInstances.climate = makeChart("climateChart", [{ label: "temperature", initial: state.temperature, color: "#dc8744" }, { label: "humidity", initial: state.humidity, color: "#4b8cb3" }], 0, 100);
+      chartInstances.water = makeChart("waterChart", [{ label: "level", initial: state.water, color: "#4689ad" }], 0, 100);
+      chartInstances.fire = makeChart("fireChart", [{ label: "fireTitle", initial: 0, color: "#bd3434" }], 0, 1);
+    }
+    function updateChart(chart, values) { if (!chart) return; chart.data.datasets.forEach((dataset, index) => { dataset.data.push(values[index]); dataset.data.shift(); }); chart.update("none"); }
+    function updateChartsLanguage() { Object.values(chartInstances).forEach((chart) => { if (!chart) return; chart.data.datasets.forEach((dataset) => { dataset.label = t(dataset.translationKey); }); chart.update("none"); }); }
+    function simulateReadings() {
+      state.soil = Math.round(randomWalk(state.soil, 8, CONFIG.soilRange));
+      state.temperature = Math.round(randomWalk(state.temperature, 1.6, CONFIG.temperatureRange) * 10) / 10;
+      state.humidity = Math.round(randomWalk(state.humidity, 5, CONFIG.humidityRange));
+      state.water = Math.round(randomWalk(state.water, 3.5, CONFIG.waterRange));
+      state.fire = state.simulatedFire;
+      updateChart(chartInstances.soil, [state.soil]); updateChart(chartInstances.climate, [state.temperature, state.humidity]);
+      updateChart(chartInstances.water, [state.water]); updateChart(chartInstances.fire, [state.fire ? 1 : 0]);
+      updateAlerts(); render();
+    }
+
+    // Prefer backend data; retain the original randomized dashboard if the API is unavailable.
+    function loadChartHistory(readings) {
+      if (!Array.isArray(readings) || readings.length === 0) return;
+      const samples = readings.slice(-CONFIG.chartPoints);
+      const labels = samples.map((reading, index) => {
+        if (!reading.timestamp) return String(index + 1);
+        return new Date(reading.timestamp).toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit" });
+      });
+      for (const chart of Object.values(chartInstances)) {
+        if (!chart) continue;
+        chart.data.labels = labels;
+        for (const dataset of chart.data.datasets) {
+          const field = dataset.translationKey === "moisture" ? "soil" : dataset.translationKey === "temperature" ? "temperature" : dataset.translationKey === "humidity" ? "humidity" : dataset.translationKey === "level" ? "waterLevel" : "fire";
+          dataset.data = samples.map((reading) => field === "fire" ? (reading.fire ? 1 : 0) : reading[field]);
+        }
+        chart.update("none");
+      }
+    }
+    async function syncDashboard() {
+      try {
+        const [sensorResponse, historyResponse, pumpResponse] = await Promise.all([
+          fetch(API_URL, { cache: "no-store" }),
+          fetch(HISTORY_URL, { cache: "no-store" }),
+          fetch("/api/pump", { cache: "no-store" })
+        ]);
+        if (!sensorResponse.ok || !historyResponse.ok || !pumpResponse.ok) throw new Error("Fieldwise API is unavailable.");
+        const [reading, history, pump] = await Promise.all([sensorResponse.json(), historyResponse.json(), pumpResponse.json()]);
+        if (![reading.soil, reading.temperature, reading.humidity, reading.waterLevel].every(Number.isFinite) || typeof reading.fire !== "boolean") throw new Error("The API returned an invalid sensor reading.");
+        state.soil = reading.soil;
+        state.temperature = reading.temperature;
+        state.humidity = reading.humidity;
+        state.water = reading.waterLevel;
+        state.fire = reading.fire || state.simulatedFire;
+        state.relay = pump.state === "ON";
+        state.apiOnline = true;
+        loadChartHistory(history.readings);
+        updateAlerts();
+        render();
+      } catch (_) {
+        state.apiOnline = false;
+        simulateReadings();
+      }
+    }
+
+    /* 19. Protection logic, alert history, and display updates */
+    function updateAlerts() {
+      const active = new Set();
+      if (state.fire) active.add("fire");
+      if (state.water < CONFIG.lowWaterThreshold) active.add("water");
+      if (state.soil < CONFIG.soilMoistureThreshold) active.add("soil");
+      for (const key of active) if (!state.previousAlerts.has(key)) pushHistory(key === "fire" ? "historyFire" : key === "water" ? "historyWater" : "historySoil");
+      for (const key of state.previousAlerts) if (!active.has(key) && key !== "fire") pushHistory("historyRecovered");
+      state.previousAlerts = active;
+    }
+    function render() {
+      document.getElementById("soilValue").textContent = state.soil;
+      document.getElementById("tempValue").textContent = state.temperature.toFixed(1);
+      document.getElementById("humidityValue").textContent = state.humidity;
+      document.getElementById("waterValue").textContent = state.water;
+      document.getElementById("tankFill").style.height = `${state.water}%`;
+      document.getElementById("tankFill").parentElement.setAttribute("aria-label", `${t("waterTitle")}: ${state.water}%`);
+      document.getElementById("soilState").textContent = state.soil < CONFIG.soilMoistureThreshold ? t("soilLow") : t("soilNormal");
+      document.getElementById("fireCard").classList.toggle("is-fire", state.fire);
+      document.getElementById("fireValue").textContent = state.fire ? t("fireDetected") : t("safe");
+      document.getElementById("fireState").textContent = state.fire ? t("fireAlarm") : t("safe");
+      document.getElementById("alertBanner").classList.toggle("is-fire", state.fire);
+      document.getElementById("alertMessage").textContent = state.fire ? t("fireAlarm") : t("systemNormal");
+      const alerts = [];
+      if (state.fire) alerts.push("fireDetected");
+      if (state.water < CONFIG.lowWaterThreshold) alerts.push("lowWater");
+      if (state.soil < CONFIG.soilMoistureThreshold) alerts.push("irrigationRequired");
+      document.getElementById("alertList").innerHTML = alerts.length ? alerts.map((key) => `<li class="alert-item"><span class="alert-marker"></span><strong>${t(key)}</strong></li>`).join("") : `<li class="alert-item"><span class="alert-marker ok"></span>${t("systemNormal")}</li>`;
+      document.getElementById("relaySwitch").checked = state.relay;
+      document.getElementById("relayWord").textContent = state.relay ? t("relayOn") : t("relayOff");
+      document.getElementById("fireButton").querySelector("span").textContent = state.simulatedFire ? t("clearFire") : t("simulateFire");
+      const history = state.history.length ? state.history : [{ key: "historyEmpty", time: null }];
+      document.getElementById("historyList").innerHTML = history.map((entry) => `<li class="history-item">${t(entry.key)}${entry.time ? `<time class="history-time" datetime="${entry.time.toISOString()}">${entry.time.toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>` : ""}</li>`).join("");
+    }
+
+    /* 20. Interaction wiring and startup */
+    languageSelect.addEventListener("change", (event) => applyLanguage(event.target.value));
+    document.getElementById("themeButton").addEventListener("click", () => { themePreference = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; localStorage.setItem("fieldwise-theme", themePreference); applyTheme(themePreference); });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (themePreference === "system") applyTheme("system"); });
+    document.getElementById("fireButton").addEventListener("click", () => {
+      state.simulatedFire = !state.simulatedFire;
+      if (state.simulatedFire) {
+        try { const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = 760; gain.gain.value = .035; oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + .25); oscillator.onended = () => context.close(); } catch (_) { /* Visual alarm remains available when audio is blocked. */ }
+      } else pushHistory("historyFireCleared");
+      state.fire = state.simulatedFire; updateAlerts(); updateChart(chartInstances.fire, [state.fire ? 1 : 0]); render();
+    });
+    document.getElementById("relaySwitch").addEventListener("change", async (event) => {
+      state.relay = event.target.checked;
+      pushHistory(state.relay ? "historyManualOn" : "historyManualOff");
+      render();
+      try {
+        const response = await fetch("/api/pump", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: state.relay ? "ON" : "OFF" }) });
+        if (!response.ok) throw new Error("Pump API request failed.");
+        state.relay = (await response.json()).state === "ON";
+        render();
+      } catch (_) {
+        state.apiOnline = false;
+      }
+    });
+    document.getElementById("menuButton").addEventListener("click", (event) => { const open = document.getElementById("navLinks").classList.toggle("open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
+    document.querySelectorAll(".nav-links a").forEach((link) => link.addEventListener("click", () => { document.getElementById("navLinks").classList.remove("open"); document.getElementById("menuButton").setAttribute("aria-expanded", "false"); }));
+    applyTheme(themePreference); initCharts(); applyLanguage("en"); updateAlerts(); render();
+    syncDashboard();
+    window.setInterval(syncDashboard, CONFIG.refreshIntervalMs);
+  </script>
+</body>
+</html>

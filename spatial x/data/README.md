@@ -1,0 +1,1 @@
+The server creates `readings.json` here on startup if the file does not exist. The file stores the latest 500 accepted sensor readings as a JSON array.

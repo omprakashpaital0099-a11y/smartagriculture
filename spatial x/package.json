@@ -1,0 +1,22 @@
+{
+  "name": "fieldwise-smart-agriculture",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local Express API for the Fieldwise smart agriculture monitoring system",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "simulate": "node simulate.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
