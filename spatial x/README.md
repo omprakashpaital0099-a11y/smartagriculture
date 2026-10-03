@@ -68,7 +68,7 @@ Its `syncDashboard()` requests both URLs, copies `soil`, `temperature`, `humidit
 
 ## Streamlit Community Cloud and ThingSpeak
 
-The repository-root `streamlit_app.py` reads the public ThingSpeak channel `3517806` on the server every 15 seconds and embeds up to 20 recent readings in the dashboard. The expected channel mapping is `field1` soil moisture, `field2` temperature, `field3` humidity, `field4` water level, and `field5` fire status (`0`/`1` or a boolean-like value). The read API key is not exposed to the browser; for a private channel, set `THINGSPEAK_READ_API_KEY` in the app's Streamlit Community Cloud Secrets.
+The repository-root `streamlit_app.py` reads ThingSpeak channel `3517806` on the server every 15 seconds and embeds up to 20 recent readings in the dashboard. Its `THINGSPEAK_CONFIG` maps field1=raw soil, field2=raw 12-bit water, field3=raw fire, field4=humidity, and field5=temperature. Soil uses editable dry/wet raw calibration (defaults 310/300); water is scaled by 4095 and flags a full-scale reading for sensor checking; fire uses an editable raw threshold and direction. Temperature and humidity values that are missing or equal to 1 display as not reporting. The read API key is not exposed to the browser; for a private channel, set `THINGSPEAK_READ_API_KEY` in the app's Streamlit Community Cloud Secrets.
 
 The Streamlit dashboard uses ThingSpeak for sensor readings only. Its pump relay control remains a demo control and does not operate the physical pump.
 

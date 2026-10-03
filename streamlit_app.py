@@ -13,9 +13,24 @@ import streamlit.components.v1 as components
 
 PROJECT_DIR = Path(__file__).resolve().parent
 FRONTEND_FILE = PROJECT_DIR / "spatial x" / "public" / "sahil.html"
-THINGSPEAK_CHANNEL_ID = "3517806"
-THINGSPEAK_RESULTS = 20
-THINGSPEAK_REFRESH_SECONDS = 15
+THINGSPEAK_CONFIG = {
+    "channel_id": "3517806",
+    "fields": {
+        "soil": 1,
+        "water": 2,
+        "fire": 3,
+        "humidity": 4,
+        "temperature": 5,
+    },
+    "soil_dry_raw": 310.0,  # Provisional; calibrate with dry soil.
+    "soil_wet_raw": 300.0,  # Provisional; calibrate with wet soil.
+    "water_adc_max": 4095.0,
+    "water_check_raw": 4095.0,
+    "fire_threshold_raw": 180.0,
+    "fire_active_when": "below",
+    "results": 20,
+    "refresh_seconds": 15,
+}
 
 st.set_page_config(page_title="Fieldwise", layout="wide")
 st.markdown(
@@ -40,46 +55,66 @@ def get_thingspeak_read_api_key() -> str:
 def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(payload, dict) or not isinstance(payload.get("feeds"), list):
         raise ValueError("ThingSpeak returned an invalid feeds response.")
+    if THINGSPEAK_CONFIG["soil_dry_raw"] == THINGSPEAK_CONFIG["soil_wet_raw"]:
+        raise ValueError("Soil DRY and WET calibration values must differ.")
+    if THINGSPEAK_CONFIG["water_adc_max"] <= 0:
+        raise ValueError("The water ADC maximum must be greater than zero.")
+    if THINGSPEAK_CONFIG["fire_active_when"] not in {"below", "above"}:
+        raise ValueError("Fire active direction must be 'below' or 'above'.")
 
     readings = []
     for feed in payload["feeds"]:
         if not isinstance(feed, dict):
             continue
-        values = [feed.get(f"field{number}") for number in range(1, 6)]
-        if any(value in (None, "") for value in values):
+        fields = THINGSPEAK_CONFIG["fields"]
+
+        def read_field(name: str) -> float | None:
+            raw_value = feed.get(f"field{fields[name]}")
+            if raw_value in (None, ""):
+                return None
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    f"ThingSpeak field{fields[name]} ({name}) must be numeric."
+                ) from error
+            if not math.isfinite(value):
+                raise ValueError(
+                    f"ThingSpeak field{fields[name]} ({name}) is not finite."
+                )
+            return value
+
+        soil_raw = read_field("soil")
+        water_raw = read_field("water")
+        if soil_raw is None or water_raw is None:
             continue
 
-        try:
-            soil, temperature, humidity, water_level = (
-                float(value) for value in values[:4]
-            )
-        except (TypeError, ValueError) as error:
-            raise ValueError(
-                "ThingSpeak fields 1–4 must contain numeric sensor readings."
-            ) from error
-        if not all(
-            math.isfinite(value)
-            for value in (soil, temperature, humidity, water_level)
-        ):
-            raise ValueError("ThingSpeak returned a non-finite sensor value.")
+        temperature = read_field("temperature")
+        humidity = read_field("humidity")
+        fire_raw = read_field("fire")
+        if temperature == 1:
+            temperature = None
+        if humidity == 1:
+            humidity = None
 
-        fire_value = str(values[4]).strip().lower()
-        if fire_value in {"1", "true", "yes", "on"}:
-            fire = True
-        elif fire_value in {"0", "false", "no", "off"}:
-            fire = False
-        else:
-            raise ValueError(
-                "ThingSpeak field5 must contain a boolean-like value "
-                "(0/1, true/false, yes/no, or on/off)."
-            )
+        dry = THINGSPEAK_CONFIG["soil_dry_raw"]
+        wet = THINGSPEAK_CONFIG["soil_wet_raw"]
+        soil_percent = (dry - soil_raw) / (dry - wet) * 100
+        water_percent = water_raw / THINGSPEAK_CONFIG["water_adc_max"] * 100
+        fire_threshold = THINGSPEAK_CONFIG["fire_threshold_raw"]
+        fire = fire_raw is not None and (
+            fire_raw < fire_threshold
+            if THINGSPEAK_CONFIG["fire_active_when"] == "below"
+            else fire_raw > fire_threshold
+        )
 
         readings.append(
             {
-                "soil": soil,
+                "soil": min(100.0, max(0.0, soil_percent)),
                 "temperature": temperature,
                 "humidity": humidity,
-                "waterLevel": water_level,
+                "waterLevel": min(100.0, max(0.0, water_percent)),
+                "waterSensorCheck": water_raw >= THINGSPEAK_CONFIG["water_check_raw"],
                 "fire": fire,
                 "timestamp": feed.get("created_at"),
             }
@@ -96,9 +131,9 @@ def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
 def fetch_thingspeak_readings() -> list[dict[str, Any]]:
     url = (
         f"https://api.thingspeak.com/channels/"
-        f"{THINGSPEAK_CHANNEL_ID}/feeds.json"
+        f"{THINGSPEAK_CONFIG['channel_id']}/feeds.json"
     )
-    params: dict[str, int | str] = {"results": THINGSPEAK_RESULTS}
+    params: dict[str, int | str] = {"results": THINGSPEAK_CONFIG["results"]}
     api_key = get_thingspeak_read_api_key()
     if api_key:
         params["api_key"] = api_key
@@ -142,7 +177,7 @@ def build_dashboard_html(readings: list[dict[str, Any]]) -> str:
     return html
 
 
-@st.fragment(run_every=THINGSPEAK_REFRESH_SECONDS)
+@st.fragment(run_every=THINGSPEAK_CONFIG["refresh_seconds"])
 def render_dashboard() -> None:
     try:
         readings = fetch_thingspeak_readings()
@@ -151,8 +186,8 @@ def render_dashboard() -> None:
         readings = []
     else:
         st.caption(
-            f"Connected to ThingSpeak channel {THINGSPEAK_CHANNEL_ID}; "
-            f"refreshing every {THINGSPEAK_REFRESH_SECONDS} seconds."
+            f"Connected to ThingSpeak channel {THINGSPEAK_CONFIG['channel_id']}; "
+            f"refreshing every {THINGSPEAK_CONFIG['refresh_seconds']} seconds."
         )
     components.html(build_dashboard_html(readings), height=2200, scrolling=True)
 

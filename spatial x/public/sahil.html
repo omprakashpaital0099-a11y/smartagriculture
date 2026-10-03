@@ -122,6 +122,7 @@
     .fire-card.is-fire { border-color: var(--red); animation: fireFlash 1s infinite; }
     .fire-card.is-fire .sensor-icon { color: var(--red); background: var(--red-wash); }.fire-card.is-fire .value { color: var(--red); }
     .chart-unavailable { display: grid; height: 100%; place-items: center; color: var(--muted); font-size: .8rem; }
+    .sensor-warning { color: var(--orange); font-weight: 700; }
 
     /* 06. Protection, alerts and relay */
     .protection-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; }
@@ -202,8 +203,8 @@
     <section class="section dashboard-section" id="dashboard"><div class="wrap"><div class="section-heading"><div><div class="eyebrow" data-i18n="dashboardEyebrow"></div><h2 data-i18n="dashboardTitle"></h2><p class="section-intro" data-i18n="dashboardIntro"></p></div><div class="live-status"><span class="live-dot"></span><span data-i18n="simulatedLive"></span></div></div>
       <div class="sensor-grid">
         <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-leaf"/></svg></span><span data-i18n="soilTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="soilValue">42</span><small>%</small></div><div class="sub-value" id="soilState"></div><div class="chart-wrap"><canvas id="soilChart" role="img" aria-label="Soil moisture chart"></canvas></div></article>
-        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-thermo"/></svg></span><span data-i18n="climateTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="tempValue">27.4</span><small> °C</small></div><div class="sub-value"><span data-i18n="humidityLabel"></span>: <strong id="humidityValue">64</strong>%</div><div class="chart-wrap"><canvas id="climateChart" role="img" aria-label="Temperature and humidity chart"></canvas></div></article>
-        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-water"/></svg></span><span data-i18n="waterTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="tank-row"><div><div class="value"><span id="waterValue">78</span><small>%</small></div><div class="sub-value" data-i18n="reservoirLevel"></div><div class="chart-wrap"><canvas id="waterChart" role="img" aria-label="Water level chart"></canvas></div></div><div class="tank" role="img" aria-label="Water tank gauge"><div class="tank-fill" id="tankFill"></div></div></div></article>
+        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-thermo"/></svg></span><span data-i18n="climateTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="tempValue">27.4</span><small id="tempUnit"> °C</small></div><div class="sub-value"><span data-i18n="humidityLabel"></span>: <strong id="humidityValue">64</strong><span id="humidityUnit">%</span> <span id="humidityStatus" class="sensor-warning" hidden></span></div><div class="chart-wrap"><canvas id="climateChart" role="img" aria-label="Temperature and humidity chart"></canvas></div></article>
+        <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-water"/></svg></span><span data-i18n="waterTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="tank-row"><div><div class="value"><span id="waterValue">78</span><small>%</small></div><div class="sub-value" data-i18n="reservoirLevel"></div><div id="waterSensorNote" class="sub-value sensor-warning" hidden>Check sensor: raw reading is at full scale.</div><div class="chart-wrap"><canvas id="waterChart" role="img" aria-label="Water level chart"></canvas></div></div><div class="tank" role="img" aria-label="Water tank gauge"><div class="tank-fill" id="tankFill"></div></div></div></article>
         <article class="sensor-card fire-card" id="fireCard"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-flame"/></svg></span><span data-i18n="fireTitle"></span></div><span class="chart-label" data-i18n="liveStatus"></span></div><div class="value" id="fireValue"></div><div class="sub-value" id="fireState"></div><div class="chart-wrap"><canvas id="fireChart" role="img" aria-label="Fire sensor status chart"></canvas></div></article>
       </div></div></section>
     <!-- 12. Protection, alerts, and relay -->
@@ -358,6 +359,7 @@
         state.humidity = reading.humidity;
         state.water = reading.waterLevel;
         state.fire = reading.fire || state.simulatedFire;
+        state.waterSensorCheck = reading.waterSensorCheck;
         state.relay = false;
         state.apiOnline = true;
         loadChartHistory(THINGSPEAK_READINGS);
@@ -402,10 +404,15 @@
     }
     function render() {
       document.getElementById("soilValue").textContent = state.soil;
-      document.getElementById("tempValue").textContent = state.temperature.toFixed(1);
-      document.getElementById("humidityValue").textContent = state.humidity;
+      document.getElementById("tempValue").textContent = Number.isFinite(state.temperature) ? state.temperature.toFixed(1) : "Sensor not reporting";
+      document.getElementById("tempUnit").hidden = !Number.isFinite(state.temperature);
+      document.getElementById("humidityValue").textContent = Number.isFinite(state.humidity) ? state.humidity : "";
+      document.getElementById("humidityUnit").hidden = !Number.isFinite(state.humidity);
+      document.getElementById("humidityStatus").textContent = Number.isFinite(state.humidity) ? "" : "Sensor not reporting";
+      document.getElementById("humidityStatus").hidden = Number.isFinite(state.humidity);
       document.getElementById("waterValue").textContent = state.water;
       document.getElementById("tankFill").style.height = `${state.water}%`;
+      document.getElementById("waterSensorNote").hidden = !state.waterSensorCheck;
       document.getElementById("tankFill").parentElement.setAttribute("aria-label", `${t("waterTitle")}: ${state.water}%`);
       document.getElementById("soilState").textContent = state.soil < CONFIG.soilMoistureThreshold ? t("soilLow") : t("soilNormal");
       document.getElementById("fireCard").classList.toggle("is-fire", state.fire);
