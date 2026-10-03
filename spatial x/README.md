@@ -68,52 +68,11 @@ The repository-root `streamlit_app.py` reads up to 30 recent ThingSpeak entries 
 
 The Streamlit dashboard uses ThingSpeak for sensor readings only. Its pump relay control remains a demo control and does not operate the physical pump.
 
-## ESP32 HTTP POST example
+## ESP32 Arduino uploader
 
-The ESP32 must use the computer's LAN IP address (not `localhost`), and both devices must be on the same network. Replace the Wi-Fi credentials and server IP below. This sample uses fixed sensor values as placeholders; replace them with actual sensor readings.
-
-```cpp
-#include <WiFi.h>
-#include <HTTPClient.h>
-
-const char* WIFI_SSID = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
-const char* SERVER_URL = "http://192.168.1.20:3000/api/data";
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWi-Fi connected");
-}
-
-void loop() {
-  if (WiFi.status() == WL_CONNECTED) {
-    float soil = 45;
-    float temperature = 28;
-    float humidity = 60;
-    float waterLevel = 70;
-    bool fire = false;
-
-    String body = "{\"soil\":" + String(soil, 1) +
-      ",\"temperature\":" + String(temperature, 1) +
-      ",\"humidity\":" + String(humidity, 1) +
-      ",\"waterLevel\":" + String(waterLevel, 1) +
-      ",\"fire\":" + String(fire ? "true" : "false") + "}";
-
-    WiFiClient client;
-    HTTPClient http;
-    if (http.begin(client, SERVER_URL)) {
-      http.addHeader("Content-Type", "application/json");
-      int status = http.POST(body);
-      Serial.printf("POST status: %d\n", status);
-      if (status > 0) Serial.println(http.getString());
-      http.end();
-    }
-  }
-  delay(3000);
-}
-```
+The complete Arduino IDE sketch for the ThingSpeak field mapping is
+[`FieldwiseESP32.ino`](./FieldwiseESP32.ino). It samples the three analog
+sensors on ADC1 pins, retries DHT reads, and updates ThingSpeak over HTTPS.
+Install Adafruit's DHT Sensor Library and Adafruit Unified Sensor. Before
+uploading, fill in the Wi-Fi credentials and ThingSpeak Write API Key in the
+sketch locally; do not commit real credentials.
