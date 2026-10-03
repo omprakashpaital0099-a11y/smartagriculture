@@ -223,6 +223,7 @@
     const CONFIG = { refreshIntervalMs: 3000, soilMoistureThreshold: 30, lowWaterThreshold: 20, soilRange: [24, 72], temperatureRange: [20, 35], humidityRange: [42, 86], waterRange: [12, 96], historyLimit: 6, chartPoints: 16 };
     const API_URL = "/api/sensors";
     const HISTORY_URL = "/api/history?limit=20";
+    const THINGSPEAK_READINGS = [];
 
     /* 16. All interface copy, status text, and chart labels */
     const translations = {
@@ -350,6 +351,20 @@
       }
     }
     async function syncDashboard() {
+      if (THINGSPEAK_READINGS.length) {
+        const reading = THINGSPEAK_READINGS[THINGSPEAK_READINGS.length - 1];
+        state.soil = reading.soil;
+        state.temperature = reading.temperature;
+        state.humidity = reading.humidity;
+        state.water = reading.waterLevel;
+        state.fire = reading.fire || state.simulatedFire;
+        state.relay = false;
+        state.apiOnline = true;
+        loadChartHistory(THINGSPEAK_READINGS);
+        updateAlerts();
+        render();
+        return;
+      }
       try {
         const [sensorResponse, historyResponse, pumpResponse] = await Promise.all([
           fetch(API_URL, { cache: "no-store" }),

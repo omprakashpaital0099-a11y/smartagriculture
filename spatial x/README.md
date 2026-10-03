@@ -66,6 +66,12 @@ const HISTORY_URL = "/api/history?limit=20";
 
 Its `syncDashboard()` requests both URLs, copies `soil`, `temperature`, `humidity`, `waterLevel`, and `fire` into the dashboard state, then calls `loadChartHistory(history.readings)`, `updateAlerts()`, and `render()`. On any failed request it sets `state.apiOnline = false` and calls `simulateReadings()`. The page starts that poll immediately and repeats it using `CONFIG.refreshIntervalMs`.
 
+## Streamlit Community Cloud and ThingSpeak
+
+The repository-root `streamlit_app.py` reads the public ThingSpeak channel `3517806` on the server every 15 seconds and embeds up to 20 recent readings in the dashboard. The expected channel mapping is `field1` soil moisture, `field2` temperature, `field3` humidity, `field4` water level, and `field5` fire status (`0`/`1` or a boolean-like value). The read API key is not exposed to the browser; for a private channel, set `THINGSPEAK_READ_API_KEY` in the app's Streamlit Community Cloud Secrets.
+
+The Streamlit dashboard uses ThingSpeak for sensor readings only. Its pump relay control remains a demo control and does not operate the physical pump.
+
 ## ESP32 HTTP POST example
 
 The ESP32 must use the computer's LAN IP address (not `localhost`), and both devices must be on the same network. Replace the Wi-Fi credentials and server IP below. This sample uses fixed sensor values as placeholders; replace them with actual sensor readings.
