@@ -9,7 +9,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 PROJECT_DIR = Path(__file__).resolve().parent
-FRONTEND_FILE = PROJECT_DIR / "public" / "sahil.html"
+FRONTEND_FILE = PROJECT_DIR / "spatial x" / "public" / "sahil.html"
 
 st.set_page_config(page_title="Fieldwise", layout="wide")
 st.markdown(
