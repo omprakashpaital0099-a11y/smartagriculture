@@ -100,6 +100,8 @@
     .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 24px; }
     .section-heading .section-intro { margin: 0; }
     .live-status { display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--muted); white-space: nowrap; font-size: .8rem; font-weight: 700; }
+    .live-status.is-live { color: var(--green); }.live-status.is-demo { color: var(--orange); }
+    .last-updated { font-size: .72rem; font-weight: 500; }
     .sensor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
     .sensor-card { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); animation: rise .5s both; }
     .sensor-card:nth-child(2) { animation-delay: .06s; }.sensor-card:nth-child(3) { animation-delay: .12s; }.sensor-card:nth-child(4) { animation-delay: .18s; }
@@ -200,7 +202,7 @@
       <div class="architecture" id="architecture"><div class="eyebrow" data-i18n="architectureEyebrow"></div><h2 data-i18n="architectureTitle"></h2><p class="section-intro" data-i18n="architectureBody"></p><div class="architecture-flow"><div class="arch-node"><svg class="icon"><use href="#i-drop"/></svg><strong data-i18n="sensorsNode"></strong><small data-i18n="sensorTypes"></small></div><div class="flow-arrow" aria-hidden="true">→</div><div class="arch-node"><svg class="icon"><use href="#i-chip"/></svg><strong data-i18n="controllerNode"></strong><small data-i18n="controllerDetail"></small></div><div class="flow-arrow" aria-hidden="true">→</div><div class="arch-node"><svg class="icon"><use href="#i-chart"/></svg><strong data-i18n="dashboardNode"></strong><small data-i18n="dashboardDetail"></small></div></div></div>
     </div></section>
     <!-- 11. Simulated sensor dashboard -->
-    <section class="section dashboard-section" id="dashboard"><div class="wrap"><div class="section-heading"><div><div class="eyebrow" data-i18n="dashboardEyebrow"></div><h2 data-i18n="dashboardTitle"></h2><p class="section-intro" data-i18n="dashboardIntro"></p></div><div class="live-status"><span class="live-dot"></span><span data-i18n="simulatedLive"></span></div></div>
+    <section class="section dashboard-section" id="dashboard"><div class="wrap"><div class="section-heading"><div><div class="eyebrow" data-i18n="dashboardEyebrow"></div><h2 data-i18n="dashboardTitle"></h2><p class="section-intro" data-i18n="dashboardIntro"></p></div><div class="live-status" id="sourceBadge"><span class="live-dot"></span><span id="sourceStatus"></span><span class="last-updated" id="lastUpdated"></span></div></div>
       <div class="sensor-grid">
         <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-leaf"/></svg></span><span data-i18n="soilTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="soilValue">42</span><small>%</small></div><div class="sub-value" id="soilState"></div><div class="chart-wrap"><canvas id="soilChart" role="img" aria-label="Soil moisture chart"></canvas></div></article>
         <article class="sensor-card"><div class="card-top"><div class="sensor-title"><span class="sensor-icon"><svg class="icon"><use href="#i-thermo"/></svg></span><span data-i18n="climateTitle"></span></div><span class="chart-label" data-i18n="lastThreeHours"></span></div><div class="value"><span id="tempValue">27.4</span><small id="tempUnit"> °C</small></div><div class="sub-value"><span data-i18n="humidityLabel"></span>: <strong id="humidityValue">64</strong><span id="humidityUnit">%</span> <span id="humidityStatus" class="sensor-warning" hidden></span></div><div class="chart-wrap"><canvas id="climateChart" role="img" aria-label="Temperature and humidity chart"></canvas></div></article>
@@ -221,10 +223,12 @@
 
   <script>
     /* 15. Simulation configuration: thresholds and update cadence */
-    const CONFIG = { refreshIntervalMs: 3000, soilMoistureThreshold: 30, lowWaterThreshold: 20, soilRange: [24, 72], temperatureRange: [20, 35], humidityRange: [42, 86], waterRange: [12, 96], historyLimit: 6, chartPoints: 16 };
-    const API_URL = "/api/sensors";
-    const HISTORY_URL = "/api/history?limit=20";
-    const THINGSPEAK_READINGS = [];
+    const CONFIG = { refreshIntervalMs: 15000, soilMoistureThreshold: 30, lowWaterThreshold: 20, soilRange: [24, 72], temperatureRange: [20, 35], humidityRange: [42, 86], waterRange: [12, 96], historyLimit: 6, chartPoints: 30 };
+    const FIELDWISE_STREAMLIT_DATA = __FIELDWISE_STREAMLIT_DATA_JSON__;
+    const THINGSPEAK_READINGS = FIELDWISE_STREAMLIT_DATA.readings;
+    CONFIG.refreshIntervalMs = FIELDWISE_STREAMLIT_DATA.config.refreshIntervalMs;
+    CONFIG.soilMoistureThreshold = FIELDWISE_STREAMLIT_DATA.config.soilMoistureThreshold;
+    CONFIG.lowWaterThreshold = FIELDWISE_STREAMLIT_DATA.config.lowWaterThreshold;
 
     /* 16. All interface copy, status text, and chart labels */
     const translations = {
@@ -270,8 +274,15 @@
       }
     };
 
+    const sourceCopy = {
+      en: { live: "ThingSpeak Live", demo: "Demo mode", liveEyebrow: "Live sensor data", demoEyebrow: "Demo sensor data", liveIntro: "Readings refresh from ThingSpeak every 15 seconds.", demoIntro: "ThingSpeak is unavailable; showing simulated readings.", lastUpdate: "Last update" },
+      hi: { live: "ThingSpeak लाइव", demo: "डेमो मोड", liveEyebrow: "लाइव सेंसर डेटा", demoEyebrow: "डेमो सेंसर डेटा", liveIntro: "ThingSpeak से रीडिंग हर 15 सेकंड में अपडेट होती हैं।", demoIntro: "ThingSpeak उपलब्ध नहीं; सिम्युलेटेड रीडिंग दिखा रहे हैं।", lastUpdate: "अंतिम अपडेट" },
+      or: { live: "ThingSpeak ଲାଇଭ୍", demo: "ଡେମୋ ମୋଡ୍", liveEyebrow: "ଲାଇଭ୍ ସେନ୍ସର ତଥ୍ୟ", demoEyebrow: "ଡେମୋ ସେନ୍ସର ତଥ୍ୟ", liveIntro: "ThingSpeak ରିଡିଂ ପ୍ରତି 15 ସେକେଣ୍ଡରେ ଅପଡେଟ୍ ହୁଏ।", demoIntro: "ThingSpeak ଉପଲବ୍ଧ ନାହିଁ; ସିମୁଲେଟେଡ୍ ରିଡିଂ ଦେଖାଯାଉଛି।", lastUpdate: "ଶେଷ ଅପଡେଟ୍" },
+      te: { live: "ThingSpeak లైవ్", demo: "డెమో మోడ్", liveEyebrow: "లైవ్ సెన్సార్ డేటా", demoEyebrow: "డెమో సెన్సార్ డేటా", liveIntro: "ThingSpeak రీడింగ్‌లు ప్రతి 15 సెకన్లకు నవీకరించబడతాయి.", demoIntro: "ThingSpeak అందుబాటులో లేదు; అనుకరణ రీడింగ్‌లు చూపిస్తున్నాం.", lastUpdate: "చివరి నవీకరణ" }
+    };
+
     /* 17. Local state and accessible language/theme handling */
-    const state = { soil: 42, temperature: 27.4, humidity: 64, water: 78, fire: false, simulatedFire: false, relay: false, apiOnline: false, history: [], previousAlerts: new Set(), language: "en" };
+    const state = { soil: 42, temperature: 27.4, humidity: 64, water: 78, waterSensorCheck: false, fire: false, simulatedFire: false, relay: false, apiOnline: false, dataSourceLive: false, lastUpdated: null, history: [], previousAlerts: new Set(), language: "en" };
     const chartInstances = {};
     let themePreference = localStorage.getItem("fieldwise-theme") || "system";
     const languageSelect = document.getElementById("languageSelect");
@@ -318,7 +329,7 @@
       chartInstances.soil = makeChart("soilChart", [{ label: "moisture", initial: state.soil, color: "#4e9b68" }], 0, 100);
       chartInstances.climate = makeChart("climateChart", [{ label: "temperature", initial: state.temperature, color: "#dc8744" }, { label: "humidity", initial: state.humidity, color: "#4b8cb3" }], 0, 100);
       chartInstances.water = makeChart("waterChart", [{ label: "level", initial: state.water, color: "#4689ad" }], 0, 100);
-      chartInstances.fire = makeChart("fireChart", [{ label: "fireTitle", initial: 0, color: "#bd3434" }], 0, 1);
+      chartInstances.fire = makeChart("fireChart", [{ label: "fireTitle", initial: 0, color: "#bd3434" }], 0, 4095);
     }
     function updateChart(chart, values) { if (!chart) return; chart.data.datasets.forEach((dataset, index) => { dataset.data.push(values[index]); dataset.data.shift(); }); chart.update("none"); }
     function updateChartsLanguage() { Object.values(chartInstances).forEach((chart) => { if (!chart) return; chart.data.datasets.forEach((dataset) => { dataset.label = t(dataset.translationKey); }); chart.update("none"); }); }
@@ -328,8 +339,9 @@
       state.humidity = Math.round(randomWalk(state.humidity, 5, CONFIG.humidityRange));
       state.water = Math.round(randomWalk(state.water, 3.5, CONFIG.waterRange));
       state.fire = state.simulatedFire;
+      state.lastUpdated = new Date().toISOString();
       updateChart(chartInstances.soil, [state.soil]); updateChart(chartInstances.climate, [state.temperature, state.humidity]);
-      updateChart(chartInstances.water, [state.water]); updateChart(chartInstances.fire, [state.fire ? 1 : 0]);
+      updateChart(chartInstances.water, [state.water]); updateChart(chartInstances.fire, [state.fire ? 0 : null]);
       updateAlerts(); render();
     }
 
@@ -345,21 +357,23 @@
         if (!chart) continue;
         chart.data.labels = labels;
         for (const dataset of chart.data.datasets) {
-          const field = dataset.translationKey === "moisture" ? "soil" : dataset.translationKey === "temperature" ? "temperature" : dataset.translationKey === "humidity" ? "humidity" : dataset.translationKey === "level" ? "waterLevel" : "fire";
-          dataset.data = samples.map((reading) => field === "fire" ? (reading.fire ? 1 : 0) : reading[field]);
+          const field = dataset.translationKey === "moisture" ? "soil" : dataset.translationKey === "temperature" ? "temperature" : dataset.translationKey === "humidity" ? "humidity" : dataset.translationKey === "level" ? "waterLevel" : "fireRaw";
+          dataset.data = samples.map((reading) => reading[field]);
         }
         chart.update("none");
       }
     }
-    async function syncDashboard() {
-      if (THINGSPEAK_READINGS.length) {
+    function syncDashboard() {
+      if (FIELDWISE_STREAMLIT_DATA.live && THINGSPEAK_READINGS.length) {
         const reading = THINGSPEAK_READINGS[THINGSPEAK_READINGS.length - 1];
         state.soil = reading.soil;
         state.temperature = reading.temperature;
         state.humidity = reading.humidity;
         state.water = reading.waterLevel;
-        state.fire = reading.fire || state.simulatedFire;
+        state.fire = reading.fire;
         state.waterSensorCheck = reading.waterSensorCheck;
+        state.dataSourceLive = true;
+        state.lastUpdated = FIELDWISE_STREAMLIT_DATA.lastUpdated;
         state.relay = false;
         state.apiOnline = true;
         loadChartHistory(THINGSPEAK_READINGS);
@@ -367,29 +381,10 @@
         render();
         return;
       }
-      try {
-        const [sensorResponse, historyResponse, pumpResponse] = await Promise.all([
-          fetch(API_URL, { cache: "no-store" }),
-          fetch(HISTORY_URL, { cache: "no-store" }),
-          fetch("/api/pump", { cache: "no-store" })
-        ]);
-        if (!sensorResponse.ok || !historyResponse.ok || !pumpResponse.ok) throw new Error("Fieldwise API is unavailable.");
-        const [reading, history, pump] = await Promise.all([sensorResponse.json(), historyResponse.json(), pumpResponse.json()]);
-        if (![reading.soil, reading.temperature, reading.humidity, reading.waterLevel].every(Number.isFinite) || typeof reading.fire !== "boolean") throw new Error("The API returned an invalid sensor reading.");
-        state.soil = reading.soil;
-        state.temperature = reading.temperature;
-        state.humidity = reading.humidity;
-        state.water = reading.waterLevel;
-        state.fire = reading.fire || state.simulatedFire;
-        state.relay = pump.state === "ON";
-        state.apiOnline = true;
-        loadChartHistory(history.readings);
-        updateAlerts();
-        render();
-      } catch (_) {
-        state.apiOnline = false;
-        simulateReadings();
-      }
+      state.dataSourceLive = false;
+      state.apiOnline = false;
+      state.waterSensorCheck = false;
+      simulateReadings();
     }
 
     /* 19. Protection logic, alert history, and display updates */
@@ -430,6 +425,21 @@
       document.getElementById("fireButton").querySelector("span").textContent = state.simulatedFire ? t("clearFire") : t("simulateFire");
       const history = state.history.length ? state.history : [{ key: "historyEmpty", time: null }];
       document.getElementById("historyList").innerHTML = history.map((entry) => `<li class="history-item">${t(entry.key)}${entry.time ? `<time class="history-time" datetime="${entry.time.toISOString()}">${entry.time.toLocaleTimeString(state.language, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</time>` : ""}</li>`).join("");
+      const sourceBadge = document.getElementById("sourceBadge");
+      sourceBadge.classList.toggle("is-live", state.dataSourceLive);
+      sourceBadge.classList.toggle("is-demo", !state.dataSourceLive);
+      const copy = sourceCopy[state.language] || sourceCopy.en;
+      document.getElementById("sourceStatus").textContent = state.dataSourceLive ? copy.live : copy.demo;
+      document.querySelector('[data-i18n="dashboardEyebrow"]').textContent =
+        state.dataSourceLive ? copy.liveEyebrow : copy.demoEyebrow;
+      document.querySelector('[data-i18n="dashboardIntro"]').textContent =
+        state.dataSourceLive ? copy.liveIntro : copy.demoIntro;
+      const updateTime = state.lastUpdated ? new Date(state.lastUpdated) : null;
+      document.getElementById("lastUpdated").textContent =
+        updateTime && Number.isFinite(updateTime.getTime())
+          ? `${copy.lastUpdate}: ${updateTime.toLocaleString(state.language)}`
+          : `${copy.lastUpdate}: unavailable`;
+      document.getElementById("fireButton").disabled = state.dataSourceLive;
     }
 
     /* 20. Interaction wiring and startup */
@@ -437,24 +447,17 @@
     document.getElementById("themeButton").addEventListener("click", () => { themePreference = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; localStorage.setItem("fieldwise-theme", themePreference); applyTheme(themePreference); });
     matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { if (themePreference === "system") applyTheme("system"); });
     document.getElementById("fireButton").addEventListener("click", () => {
+      if (state.dataSourceLive) return;
       state.simulatedFire = !state.simulatedFire;
       if (state.simulatedFire) {
         try { const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = 760; gain.gain.value = .035; oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + .25); oscillator.onended = () => context.close(); } catch (_) { /* Visual alarm remains available when audio is blocked. */ }
       } else pushHistory("historyFireCleared");
-      state.fire = state.simulatedFire; updateAlerts(); updateChart(chartInstances.fire, [state.fire ? 1 : 0]); render();
+      state.fire = state.simulatedFire; updateAlerts(); updateChart(chartInstances.fire, [state.fire ? 1 : null]); render();
     });
-    document.getElementById("relaySwitch").addEventListener("change", async (event) => {
+    document.getElementById("relaySwitch").addEventListener("change", (event) => {
       state.relay = event.target.checked;
       pushHistory(state.relay ? "historyManualOn" : "historyManualOff");
       render();
-      try {
-        const response = await fetch("/api/pump", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ state: state.relay ? "ON" : "OFF" }) });
-        if (!response.ok) throw new Error("Pump API request failed.");
-        state.relay = (await response.json()).state === "ON";
-        render();
-      } catch (_) {
-        state.apiOnline = false;
-      }
     });
     document.getElementById("menuButton").addEventListener("click", (event) => { const open = document.getElementById("navLinks").classList.toggle("open"); event.currentTarget.setAttribute("aria-expanded", String(open)); });
     document.querySelectorAll(".nav-links a").forEach((link) => link.addEventListener("click", () => { document.getElementById("navLinks").classList.remove("open"); document.getElementById("menuButton").setAttribute("aria-expanded", "false"); }));

@@ -55,20 +55,16 @@ Automatic irrigation turns on below 30% soil moisture when water is above 20%, a
 
 ## Frontend API connection
 
-The served `public/sahil.html` is a copy of the existing dashboard with an API adapter. It defines `API_URL = "/api/sensors"` and `HISTORY_URL = "/api/history?limit=20"`, loads those readings into the existing cards and charts, and polls `/api/pump`. If the API cannot be reached or has no reading yet, `syncDashboard()` catches the request failure and calls the existing `simulateReadings()` demo fallback. The original root-level `sahil.html` remains unchanged; the connected copy is `public/sahil.html`.
+The served `public/sahil.html` is embedded by the Streamlit app. The original root-level `sahil.html` remains unchanged; the hosted frontend is `public/sahil.html`.
 
-The exact endpoint constants already used in `public/sahil.html` are:
-
-```js
-const API_URL = "/api/sensors";
-const HISTORY_URL = "/api/history?limit=20";
-```
-
-Its `syncDashboard()` requests both URLs, copies `soil`, `temperature`, `humidity`, `waterLevel`, and `fire` into the dashboard state, then calls `loadChartHistory(history.readings)`, `updateAlerts()`, and `render()`. On any failed request it sets `state.apiOnline = false` and calls `simulateReadings()`. The page starts that poll immediately and repeats it using `CONFIG.refreshIntervalMs`.
+The HTML front end in `public/sahil.html` is embedded by the repository-root
+Streamlit app. It gets its current ThingSpeak snapshot through a single
+`__FIELDWISE_STREAMLIT_DATA_JSON__` placeholder; it does not call the legacy
+Fieldwise API routes.
 
 ## Streamlit Community Cloud and ThingSpeak
 
-The repository-root `streamlit_app.py` reads ThingSpeak channel `3517806` on the server every 15 seconds and embeds up to 20 recent readings in the dashboard. Its `THINGSPEAK_CONFIG` maps field1=raw soil, field2=raw 12-bit water, field3=raw fire, field4=humidity, and field5=temperature. Soil uses editable dry/wet raw calibration (defaults 310/300); water is scaled by 4095 and flags a full-scale reading for sensor checking; fire uses an editable raw threshold and direction. Temperature and humidity values that are missing or equal to 1 display as not reporting. The read API key is not exposed to the browser; for a private channel, set `THINGSPEAK_READ_API_KEY` in the app's Streamlit Community Cloud Secrets.
+The repository-root `streamlit_app.py` reads up to 30 recent ThingSpeak entries every 15 seconds. Its `CONFIG` maps field1=raw soil, field2=raw 12-bit water, field3=raw fire, field4=humidity, and field5=temperature. Soil uses editable dry/wet raw calibration (provisional defaults 310/300); water is scaled by 4095 and flags a full-scale reading for sensor checking; fire uses an editable raw threshold and direction (provisional default: above 250). Temperature and humidity values that are missing or equal to 1 display as not reporting. The channel ID and optional read API key come from Streamlit app secrets and are never embedded in the HTML. On fetch failure, Streamlit reports the error and the dashboard shows simulated demo readings.
 
 The Streamlit dashboard uses ThingSpeak for sensor readings only. Its pump relay control remains a demo control and does not operate the physical pump.
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,24 +14,28 @@ import streamlit.components.v1 as components
 
 PROJECT_DIR = Path(__file__).resolve().parent
 FRONTEND_FILE = PROJECT_DIR / "spatial x" / "public" / "sahil.html"
-THINGSPEAK_CONFIG = {
-    "channel_id": "3517806",
-    "fields": {
+CONFIG = {
+    "CHANNEL_ID_SECRET": "THINGSPEAK_CHANNEL_ID",
+    "CHANNEL_ID_DEFAULT": "3517806",
+    "READ_KEY_SECRET": "THINGSPEAK_READ_API_KEY",
+    "FIELD_MAP": {
         "soil": 1,
         "water": 2,
         "fire": 3,
         "humidity": 4,
         "temperature": 5,
     },
-    "soil_dry_raw": 310.0,  # Provisional; calibrate with dry soil.
-    "soil_wet_raw": 300.0,  # Provisional; calibrate with wet soil.
-    "water_adc_max": 4095.0,
-    "water_check_raw": 4095.0,
-    "fire_threshold_raw": 180.0,
-    "fire_active_when": "below",
-    "results": 20,
-    "refresh_seconds": 15,
+    "SOIL_DRY": 310.0,  # Provisional raw value; calibrate in dry soil.
+    "SOIL_WET": 300.0,  # Provisional raw value; calibrate in wet soil.
+    "WATER_MAX": 4095.0,
+    "FIRE_THRESHOLD": 250.0,  # Provisional; verify against the actual sensor.
+    "FIRE_ACTIVE_WHEN": "above",  # Set to "below" if the sensor works oppositely.
+    "SOIL_ALERT_THRESHOLD": 30.0,
+    "LOW_WATER_ALERT_THRESHOLD": 20.0,
+    "REFRESH_SECONDS": 15,
+    "RESULTS": 30,
 }
+DATA_PLACEHOLDER = "__FIELDWISE_STREAMLIT_DATA_JSON__"
 
 st.set_page_config(page_title="Fieldwise", layout="wide")
 st.markdown(
@@ -45,28 +50,28 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-def get_thingspeak_read_api_key() -> str:
+def get_secret(name: str, default: str = "") -> str:
     try:
-        return str(st.secrets["THINGSPEAK_READ_API_KEY"]).strip()
+        return str(st.secrets.get(name, default)).strip()
     except (KeyError, FileNotFoundError):
-        return ""
+        return default
 
 
 def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
     if not isinstance(payload, dict) or not isinstance(payload.get("feeds"), list):
         raise ValueError("ThingSpeak returned an invalid feeds response.")
-    if THINGSPEAK_CONFIG["soil_dry_raw"] == THINGSPEAK_CONFIG["soil_wet_raw"]:
+    if CONFIG["SOIL_DRY"] == CONFIG["SOIL_WET"]:
         raise ValueError("Soil DRY and WET calibration values must differ.")
-    if THINGSPEAK_CONFIG["water_adc_max"] <= 0:
-        raise ValueError("The water ADC maximum must be greater than zero.")
-    if THINGSPEAK_CONFIG["fire_active_when"] not in {"below", "above"}:
+    if CONFIG["WATER_MAX"] <= 0:
+        raise ValueError("WATER_MAX must be greater than zero.")
+    if CONFIG["FIRE_ACTIVE_WHEN"] not in {"below", "above"}:
         raise ValueError("Fire active direction must be 'below' or 'above'.")
 
     readings = []
     for feed in payload["feeds"]:
         if not isinstance(feed, dict):
             continue
-        fields = THINGSPEAK_CONFIG["fields"]
+        fields = CONFIG["FIELD_MAP"]
 
         def read_field(name: str) -> float | None:
             raw_value = feed.get(f"field{fields[name]}")
@@ -92,19 +97,21 @@ def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
         temperature = read_field("temperature")
         humidity = read_field("humidity")
         fire_raw = read_field("fire")
-        if temperature == 1:
+        if temperature is None or temperature == 1:
             temperature = None
-        if humidity == 1:
+        if humidity is None or humidity == 1:
             humidity = None
 
-        dry = THINGSPEAK_CONFIG["soil_dry_raw"]
-        wet = THINGSPEAK_CONFIG["soil_wet_raw"]
-        soil_percent = (dry - soil_raw) / (dry - wet) * 100
-        water_percent = water_raw / THINGSPEAK_CONFIG["water_adc_max"] * 100
-        fire_threshold = THINGSPEAK_CONFIG["fire_threshold_raw"]
+        soil_percent = (
+            (CONFIG["SOIL_DRY"] - soil_raw)
+            / (CONFIG["SOIL_DRY"] - CONFIG["SOIL_WET"])
+            * 100
+        )
+        water_percent = water_raw / CONFIG["WATER_MAX"] * 100
+        fire_threshold = CONFIG["FIRE_THRESHOLD"]
         fire = fire_raw is not None and (
             fire_raw < fire_threshold
-            if THINGSPEAK_CONFIG["fire_active_when"] == "below"
+            if CONFIG["FIRE_ACTIVE_WHEN"] == "below"
             else fire_raw > fire_threshold
         )
 
@@ -114,8 +121,9 @@ def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
                 "temperature": temperature,
                 "humidity": humidity,
                 "waterLevel": min(100.0, max(0.0, water_percent)),
-                "waterSensorCheck": water_raw >= THINGSPEAK_CONFIG["water_check_raw"],
+                "waterSensorCheck": water_raw >= CONFIG["WATER_MAX"],
                 "fire": fire,
+                "fireRaw": fire_raw,
                 "timestamp": feed.get("created_at"),
             }
         )
@@ -129,12 +137,16 @@ def parse_thingspeak_feeds(payload: Any) -> list[dict[str, Any]]:
 
 
 def fetch_thingspeak_readings() -> list[dict[str, Any]]:
-    url = (
-        f"https://api.thingspeak.com/channels/"
-        f"{THINGSPEAK_CONFIG['channel_id']}/feeds.json"
+    channel_id = get_secret(
+        CONFIG["CHANNEL_ID_SECRET"], CONFIG["CHANNEL_ID_DEFAULT"]
     )
-    params: dict[str, int | str] = {"results": THINGSPEAK_CONFIG["results"]}
-    api_key = get_thingspeak_read_api_key()
+    if not channel_id:
+        raise ValueError("Set THINGSPEAK_CHANNEL_ID in Streamlit app secrets.")
+    url = (
+        f"https://api.thingspeak.com/channels/{channel_id}/feeds.json"
+    )
+    params: dict[str, int | str] = {"results": CONFIG["RESULTS"]}
+    api_key = get_secret(CONFIG["READ_KEY_SECRET"])
     if api_key:
         params["api_key"] = api_key
 
@@ -156,39 +168,33 @@ def fetch_thingspeak_readings() -> list[dict[str, Any]]:
 
 def build_dashboard_html(readings: list[dict[str, Any]]) -> str:
     html = FRONTEND_FILE.read_text(encoding="utf-8")
-    html = html.replace(
-        "const THINGSPEAK_READINGS = [];",
-        f"const THINGSPEAK_READINGS = {json.dumps(readings)};",
-    )
-    if readings:
-        html = html.replace(
-            'dashboardEyebrow: "Local simulation"',
-            'dashboardEyebrow: "ThingSpeak live data"',
-        ).replace(
-            'dashboardIntro: "Sensor values refresh every three seconds. This demo uses realistic simulated data; it is not connected to physical sensors."',
-            'dashboardIntro: "Live sensor readings from ThingSpeak refresh every fifteen seconds."',
-        ).replace(
-            'simulatedLive: "SIMULATED LIVE"',
-            'simulatedLive: "THINGSPEAK LIVE"',
-        ).replace(
-            'simulationNote: "Simulated values · No hardware connection"',
-            'simulationNote: "ThingSpeak sensor feed · Pump control remains demo-only"',
-        )
-    return html
+    if html.count(DATA_PLACEHOLDER) != 1:
+        raise ValueError("Dashboard must contain exactly one data placeholder.")
+    payload = {
+        "live": bool(readings),
+        "lastUpdated": (
+            readings[-1]["timestamp"]
+            if readings and readings[-1]["timestamp"]
+            else datetime.now(timezone.utc).isoformat()
+        ),
+        "readings": readings,
+        "config": {
+            "refreshIntervalMs": CONFIG["REFRESH_SECONDS"] * 1000,
+            "soilMoistureThreshold": CONFIG["SOIL_ALERT_THRESHOLD"],
+            "lowWaterThreshold": CONFIG["LOW_WATER_ALERT_THRESHOLD"],
+        },
+    }
+    serialized_payload = json.dumps(payload).replace("</", "<\\/")
+    return html.replace(DATA_PLACEHOLDER, serialized_payload)
 
 
-@st.fragment(run_every=THINGSPEAK_CONFIG["refresh_seconds"])
+@st.fragment(run_every=CONFIG["REFRESH_SECONDS"])
 def render_dashboard() -> None:
     try:
         readings = fetch_thingspeak_readings()
     except ValueError as error:
-        st.error(f"ThingSpeak connection failed: {error}")
+        st.warning(f"ThingSpeak unavailable; showing demo readings. {error}")
         readings = []
-    else:
-        st.caption(
-            f"Connected to ThingSpeak channel {THINGSPEAK_CONFIG['channel_id']}; "
-            f"refreshing every {THINGSPEAK_CONFIG['refresh_seconds']} seconds."
-        )
     components.html(build_dashboard_html(readings), height=2200, scrolling=True)
 
 
