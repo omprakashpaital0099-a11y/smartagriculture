@@ -122,9 +122,8 @@ def fetch_thingspeak_readings() -> list[dict[str, Any]]:
 def build_dashboard_html(readings: list[dict[str, Any]]) -> str:
     html = FRONTEND_FILE.read_text(encoding="utf-8")
     html = html.replace(
-        "const HISTORY_URL = \"/api/history?limit=20\";",
-        "const HISTORY_URL = \"/api/history?limit=20\";\n"
-        f"    const THINGSPEAK_READINGS = {json.dumps(readings)};",
+        "const THINGSPEAK_READINGS = [];",
+        f"const THINGSPEAK_READINGS = {json.dumps(readings)};",
     )
     if readings:
         html = html.replace(
